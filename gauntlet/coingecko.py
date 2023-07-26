@@ -75,8 +75,10 @@ def get_ohlc(cg_token_id: str):
 
 
 if __name__ == "__main__":
-    rpl = "0xd33526068d116ce69f19a9ee46f0bd304f21a51f"
-    rpl_info = coin_info(rpl, "ethereum")
+    usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+    usdc_info = coin_info(usdc, "ethereum")
+    usdt_info = coin_info(usdt, "ethereum")
     breakpoint()
     weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
     steth = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"

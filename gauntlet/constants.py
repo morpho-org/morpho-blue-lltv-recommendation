@@ -10,7 +10,7 @@ class Token:
     def __repr__(self):
         return f"Token(address='{self.address}', decimals={self.decimals}, coingecko_id='{self.coingecko_id}', symbol='{self.symbol}')"
 
-# TODO: expand
+# TODO: expand token set
 TOKENS = [
     Token(address='0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9', decimals=18, coingecko_id='aave', symbol='aave'),
     Token(address='0x111111111117dc0aa78b770fa6a738034120c302', decimals=18, coingecko_id='1inch', symbol='1inch'),
@@ -28,8 +28,9 @@ TOKENS = [
     Token(address='0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2', decimals=18, coingecko_id='maker', symbol='mkr'),
     Token(address='0x5a98fcbea516cf06857215779fd812ca3bef1b32', decimals=18, coingecko_id='lido-dao', symbol='ldo'),
     Token(address='0xd533a949740bb3306d119cc777fa900ba034cd52', decimals=18, coingecko_id='curve-dao-token', symbol='crv'),
+    Token(address='0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', decimals=6, coingecko_id='usd-coin', symbol='usdc'),
+    Token(address='0xdac17f958d2ee523a2206206994597c13d831ec7', decimals=6, coingecko_id='tether', symbol='usdt')
 ]
-
 
 
 ADDRESS_MAP = {
