@@ -1,5 +1,3 @@
-from coingecko import coin_info
-
 class Token:
     def __init__(self, address: str, decimals: int, coingecko_id: str, symbol: str = ""):
         self.address = address
