@@ -38,7 +38,7 @@ class API(ABC):
             # no need to wait since the elapsed time is long enough
             return 0
         # else:
-        #     return period_length - dt
+        # not sure
 
     def make_request(self, **request_kwargs) -> requests.request:
         wt = self.calculate_wait_time()

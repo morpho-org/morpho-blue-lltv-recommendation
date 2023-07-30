@@ -253,7 +253,7 @@ def simulate_insolvency(
     for i in range(max_iters):
         # Decrease the price of the collateral
         #nprice = max(min_price, price * decr_scale)
-        price = price * 0.99 # decr_scale
+        price = price * decr_scale
         collateral_usd = price * collateral
 
         # If the debt to collateral ratio is lower than the LTV, we can start liquidating
@@ -277,8 +277,7 @@ def simulate_insolvency(
                 collateral_usd -= claimed_collateral_usd
                 collateral -= claimed_collateral_usd / price
                 debt_usd -= repay_amount_usd
-        if symbol in {"link", "crv"}:
-            price *= 0.995
+
         if collateral_usd == 0:
             insolvency = debt_usd
             break
@@ -289,18 +288,12 @@ def simulate_insolvency(
 
 def main():
     decr_scalar = 0.995
-    threshold = 0.05
+    threshold = 0
     drawdown_scalar = 1
     lltvs = [0.01 * x for x in range(50, 100)]
     sym_ltvs = {}
     opt_vals = {}
 
-    fig, axs = plt.subplots(
-        3, 2, figsize=(10, 10)
-    )  # Create a 2x2 grid of subplots
-    fig.subplots_adjust(wspace=0.3, hspace=0.3)  # Add space between subplots
-
-    #for idx, sym in enumerate(SYMBOL_MAP.keys()):
     excluded = ["usdc", "usdt", "rpl"]
     symbols = list(x for x in SYMBOL_MAP.keys() if not x in excluded)
     symbols = [
@@ -308,24 +301,23 @@ def main():
         'weth', 'wbtc', 'link', 'crv'
     ]
     decr_scalars = {90: 1-0.005, 95: 1-0.007, 99: 1-0.01}
+
     for p in [90, 95, 99]:
         print('-' * 90)
         for idx, sym in enumerate(symbols):
             sym_ltvs[sym] = {}
             ltvs = sym_ltvs[sym]
-            # print(f"{sym} | drawdown: {drawdowns[sym][95]}")
+
             for l in lltvs:
                 ins = simulate_insolvency(
                     initial_collateral_price=init_prices_sym[sym],
                     initial_debt_price=1,
-                    # initial_debt_price=init_prices_sym["wsteth"] / init_prices_sym["weth"],
                     initial_collateral=init_collaterals.get(sym, 20_000_000 / init_prices_sym[sym]),
                     ltv=l,
                     repay_amount_usd=repay_amounts_50bps[sym] * init_prices_sym[sym],
-                    liq_bonus=0.07,# AAVE_LIQ_BONUS[sym],
-                    # max_drawdown=drawdowns[sym][p] * drawdown_scalar,
+                    liq_bonus=AAVE_LIQ_BONUS[sym],
                     max_drawdown=0.3,# drawdowns[sym][p] * drawdown_scalar,
-                    decr_scale=0.995,
+                    decr_scale=decr_scalars[p],
                     symbol=sym,
                 )
 
@@ -333,20 +325,13 @@ def main():
                 if ltvs[l] > 0:
                     print(f"First nonzero ltv for {sym}: {l -0.01} | Repay: {repay_amounts_50bps[sym] * init_prices_sym[sym]} | {ltvs[l]}")
                     break
-                # print(sym, ltvs[l])
+
+                # first ltv that is larger than the threshold
                 if sym not in opt_vals and ltvs[l] > threshold:
                     opt_vals[sym] = l
 
             ls = list(ltvs.keys())
             ds = [ltvs[l] for l in ls]
-            # print(sym, ltvs)
-            #ax = axs[idx//2, idx%2]
-            #ax.plot(ls, ds)
-            #ax.set_ylabel("Bad Debt")
-            #ax.set_xlabel("LLTV")
-            #ax.axhline(threshold, color='r', linestyle='--')
-            #ax.set_title(f"{sym.upper()} Insolvent Debt by LLTV: {opt_vals[sym]:.2f}")
-        # plt.show()
 
 
 if __name__ == "__main__":
