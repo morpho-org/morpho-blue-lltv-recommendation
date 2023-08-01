@@ -5,7 +5,7 @@ import time
 from utils import price_impact_size
 
 import pandas as pd
-from coingecko import get_current_price
+from coingecko import CoinGecko
 from constants import ADDRESS_MAP
 from constants import SYMBOL_MAP
 from constants import Token
@@ -15,9 +15,9 @@ from drawdowns import load_prices, load_ohlcs, compute_drawdowns, get_price_rati
 
 def get_init_prices():
     init_prices = {}
-
+    cg = CoinGecko()
     for s, tok in SYMBOL_MAP.items():
-        init_prices[tok] = get_current_price(tok.address)
+        init_prices[tok] = cg.current_price(tok.address)
         time.sleep(2)
 
     pprint.pp(init_prices)
@@ -123,6 +123,12 @@ init_prices = {
         coingecko_id="curve-dao-token",
         symbol="crv",
     ): 0.722208,
+    Token(
+        address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        decimals=6,
+        coingecko_id="usd-coin",
+        symbol="usdc",
+    ): 1.0,
 }
 init_prices_sym = {token.symbol: value for token, value in init_prices.items()}
 init_prices_sym["wsteth"] = 2104 # init_prices[SYMBOL_MAP["wsteth"]]
@@ -177,6 +183,8 @@ repay_amounts_50bps = {
     "mkr": 100,
     "ldo": 30677.35602094241,
     "crv": 382861.5919551731,
+    "usdt": 200_000_000,
+    "usdc": 200_000_000,
 }
 
 # Use aave supply caps and take some constant fraction of it
@@ -188,6 +196,7 @@ init_collaterals = {
     "wbtc": 500_000_000 / init_prices_sym["wbtc"],
     "link": 10_000_000 / init_prices_sym["link"],
     "crv": 10_000_000 / init_prices_sym["crv"],
+    "aave": 10_000_000 / init_prices_sym["aave"],
 }
 
 
@@ -251,8 +260,6 @@ def simulate_insolvency(
 
     price *= (1 - 0.1) # initial drop
     for i in range(max_iters):
-        # Decrease the price of the collateral
-        #nprice = max(min_price, price * decr_scale)
         price = price * decr_scale
         collateral_usd = price * collateral
 
@@ -295,43 +302,45 @@ def main():
     opt_vals = {}
 
     excluded = ["usdc", "usdt", "rpl"]
+    stables = ["usdc"]
     symbols = list(x for x in SYMBOL_MAP.keys() if not x in excluded)
     symbols = [
         # 'wsteth'
-        'weth', 'wbtc', 'link', 'crv'
+        'weth', 'wbtc', 'link', 'crv', 'aave',
     ]
     decr_scalars = {90: 1-0.005, 95: 1-0.007, 99: 1-0.01}
 
     for p in [90, 95, 99]:
         print('-' * 90)
         for idx, sym in enumerate(symbols):
-            sym_ltvs[sym] = {}
-            ltvs = sym_ltvs[sym]
+            for j, sym2 in enumerate(stables):
+                sym_ltvs[(sym, sym2)] = {}
+                ltvs = sym_ltvs[(sym, sym2)]
 
-            for l in lltvs:
-                ins = simulate_insolvency(
-                    initial_collateral_price=init_prices_sym[sym],
-                    initial_debt_price=1,
-                    initial_collateral=init_collaterals.get(sym, 20_000_000 / init_prices_sym[sym]),
-                    ltv=l,
-                    repay_amount_usd=repay_amounts_50bps[sym] * init_prices_sym[sym],
-                    liq_bonus=AAVE_LIQ_BONUS[sym],
-                    max_drawdown=0.3,# drawdowns[sym][p] * drawdown_scalar,
-                    decr_scale=decr_scalars[p],
-                    symbol=sym,
-                )
+                for l in lltvs:
+                    ins = simulate_insolvency(
+                        initial_collateral_price=init_prices_sym[sym],
+                        initial_debt_price=1,
+                        initial_collateral=init_collaterals.get(sym, 20_000_000 / init_prices_sym[sym]),
+                        ltv=l,
+                        repay_amount_usd=repay_amounts_50bps[sym] * init_prices_sym[sym],
+                        liq_bonus=AAVE_LIQ_BONUS[sym],
+                        max_drawdown=0.3,# drawdowns[sym][p] * drawdown_scalar,
+                        decr_scale=decr_scalars[p],
+                        symbol=sym,
+                    )
 
-                ltvs[l] = ins / (init_collaterals.get(sym, 20_000_000 / init_prices_sym[sym])* init_prices_sym[sym])
-                if ltvs[l] > 0:
-                    print(f"First nonzero ltv for {sym}: {l -0.01} | Repay: {repay_amounts_50bps[sym] * init_prices_sym[sym]} | {ltvs[l]}")
-                    break
+                    ltvs[l] = ins / (init_collaterals.get(sym, 20_000_000 / init_prices_sym[sym])* init_prices_sym[sym])
+                    if ltvs[l] > 0:
+                        print(f"First nonzero ltv for {sym}: {l -0.01} | Repay: {repay_amounts_50bps[sym] * init_prices_sym[sym]} | {ltvs[l]}")
+                        break
 
-                # first ltv that is larger than the threshold
-                if sym not in opt_vals and ltvs[l] > threshold:
-                    opt_vals[sym] = l
+                    # first ltv that is larger than the threshold
+                    if sym not in opt_vals and ltvs[l] > threshold:
+                        opt_vals[sym] = l
 
-            ls = list(ltvs.keys())
-            ds = [ltvs[l] for l in ls]
+                ls = list(ltvs.keys())
+                ds = [ltvs[l] for l in ls]
 
 
 if __name__ == "__main__":
