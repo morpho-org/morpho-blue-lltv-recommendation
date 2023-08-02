@@ -30,7 +30,6 @@ TOKENS = [
     Token(address='0xdac17f958d2ee523a2206206994597c13d831ec7', decimals=6, coingecko_id='tether', symbol='usdt')
 ]
 
-
 ADDRESS_MAP = {
     t.address: t for t in TOKENS
 }
@@ -41,4 +40,8 @@ SYMBOL_MAP = {
 
 ID_MAP = {
     t.coingecko_id: t for t in TOKENS
+}
+
+STABLES = {
+    SYMBOL_MAP['usdc'], SYMBOL_MAP['usdt']
 }

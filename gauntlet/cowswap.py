@@ -24,6 +24,17 @@ def get_cowswap(token_in: str, token_out: str, token_in_decimals: int, amount: f
     response = requests.post(url, json=params)
     return response.json()
 
+def get_impact(token_in: str, token_out: str, token_in_decimals: int, token_out_decimals: int, amount: float, quality: str = "optimal"):
+    cg = CoinGecko()
+    spot_in = cg.current_price(token_in)
+    spot_out = cg.current_price(token_out)
+
+    response = get_cowswap(token_in, token_out, token_in_decimals, amount, quality)
+    amount_in_usd = float(response['quote']['sellAmount']) / (10 ** token_in_decimals) * spot_in
+    amount_out_usd = float(response['quote']['buyAmount']) / (10 ** token_out_decimals) * spot_out
+    price_impact = 1 - float(amount_out_usd / amount_in_usd)
+    return price_impact
+
 if __name__ == '__main__':
     weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
     usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
