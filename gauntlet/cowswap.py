@@ -1,6 +1,7 @@
 import time
 import json
 import requests
+from coingecko import CoinGecko
 
 def get_cowswap(token_in: str, token_out: str, token_in_decimals: int, amount: float, quality: str = "optimal"):
     url = "https://api.cow.fi/mainnet/api/v1/quote"
@@ -28,16 +29,22 @@ if __name__ == '__main__':
     usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     amount = 100_000
 
+    cg = CoinGecko()
+    weth_spot = cg.current_price(weth)
+    print("weth spot: {}".format(weth_spot))
     st = time.time()
-    impact = get_cowswap(weth, usdc, 18, amount, "optimal")
+    res = get_cowswap(weth, usdc, 18, amount, "fast")
     end = time.time()
-    print(impact['quote']['buyAmount'])
-    print("Cow swap time: {:.3f}".format(end - st))
+    amount_in = weth_spot * float(res['quote']['sellAmount']) / 1e18
+    amount_out = float(res['quote']['buyAmount']) / 1e6
+    price_impact = 1 - (amount_out / amount_in)
 
-
-    st = time.time()
-    impact = get_cowswap(weth, usdc, 18, amount, "fast")
-    end = time.time()
-    print(impact['quote']['buyAmount'])
-    print("Cow swap time: {:.3f}".format(end - st))
-    breakpoint()
+    print("Swap size of {} | Sell price: {:.2f} | Amount received: {}".format(
+        int(res['quote']['sellAmount']) / 1e18,
+        int(res['quote']['sellAmount']) / 1e18 * weth_spot,
+        int(res['quote']['buyAmount']) / 1e6,
+    ))
+    print("Price impact: {:.3f}".format(
+        price_impact
+    ))
+    print("Cow swap time: {:.3f}s".format(end - st))
