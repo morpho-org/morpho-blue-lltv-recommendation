@@ -7,7 +7,6 @@ import json
 
 import pandas as pd
 import requests
-from constants import SYMBOL_MAP
 
 def get_coingecko_api_key():
     return os.environ.get("COINGECKO_API_KEY")

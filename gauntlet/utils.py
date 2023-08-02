@@ -116,9 +116,10 @@ if __name__ == '__main__':
         usdc: "usdc", link: "link", aave: "aave", crv: "crv", weth: "weth", wbtc: "wbtc", wsteth: 'wsteth'
     }
     # for sym in [link, crv, aave, weth, wbtc]:
-    for sym in [wsteth]:
-        print('kyber')
-        print(sym, price_impact_size(sym, decimals[addr_to_sym[sym]], usdc, decimals['usdc'], 0.02))
-        print('cow')
-        print(sym, price_impact_size_cowswap(sym, decimals[addr_to_sym[sym]], usdc, decimals['usdc'], 0.02))
+    for sym in [aave]:
+        for p in [0.02, 0.1, 0.2, 0.5]:
+            # print('kyber')
+            # print(sym, price_impact_size(sym, decimals[addr_to_sym[sym]], usdc, decimals['usdc'], p))
+            # print('cow')
+            print(sym, price_impact_size_cowswap(sym, decimals[addr_to_sym[sym]], usdc, decimals['usdc'], p))
         print('-' * 20)

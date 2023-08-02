@@ -54,4 +54,4 @@ if __name__ == '__main__':
     datajs = json.dumps(data)
 
     with open('../data/swap_sizes.json', 'w') as json_file:
-        json.dump(datajs, json_file)
+        json.dumps(datajs, json_file)
