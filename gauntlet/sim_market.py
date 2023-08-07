@@ -49,25 +49,21 @@ def simulate_insolvency(
     debt_usd = initial_collateral_usd * ltv
     debt_tokens = debt_usd / initial_debt_price
     ctd = initial_ctd = collateral_usd / debt_usd  # decreasing ctd --> increasing dtc
-    min_price = initial_ctd * (1 - max_drawdown - drawdown_buffer)
+
     insolvency = 0
-    max_iters = 100000  # this should be a function of the
+    max_iters = 100000
 
     net_collateral = collateral_tokens * initial_collateral_price
     net_debt = debt_tokens * initial_debt_price
+    min_collat = initial_ctd * (1 - max_drawdown)
 
     for i in range(1000):
         """
         We dont want to explicitly update the collateral asset price
         (or the debt asset's price). What actually matters is that
         the collateral to debt value has decreased.
-
-        Recall that we ultimately care about
-        is
-
-
         """
-        net_collateral *= decr_scale
+        net_collateral = max(min_collat, net_collateral * decr_scale)
         ctd = (net_collateral / net_debt) * decr_scale
 
         dtc = 1 / ctd
@@ -115,10 +111,8 @@ def main():
         "wsteth",
         "weth",
         "usdc",
-        "wbtc",
         "link",
         "uni",
-        "bal",
     ]
 
     cg = CoinGecko()
@@ -160,8 +154,8 @@ def main():
 
                     if insolvency > 0:
                         print(
-                            f"First nonzero ltv for {sym1}, {sym2}: {ltv}"
-                            + "| Repay: {repay_amount_usd} | {amount}"
+                            f"First nonzero ltv for {sym1}, {sym2}: {ltv}" + \
+                            f"| Repay: {repay_amount_usd} | {insolvency}"
                         )
                         opt_ltvs[(sym1, sym2)] = ltv
                         break

@@ -3,7 +3,7 @@ import time
 import pickle
 from cowswap import get_impact
 from utils import price_impact_size_cowswap
-from constants import TOKENS, STABLES, SYMBOL_MAP
+from constants import TOKENS, SYMBOL_MAP
 
 def compute_impacts():
     impact_sizes = {}
@@ -19,8 +19,6 @@ def compute_impacts():
     st = time.time()
     for tok in TOKENS:
         impact_sizes[tok.symbol] = {}
-        if tok in STABLES:
-            continue
 
         for i in impacts:
             impact_sizes[tok.symbol][i] = price_impact_size_cowswap(tok.address, tok.decimals, usdc.address, usdc.decimals, i)
