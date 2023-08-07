@@ -11,20 +11,18 @@ from constants import AAVE_TOKENS
 
 log = logger.get_logger(__name__)
 
-T1 = BCHIPS = BLUE_CHIP = [
+T1 = [
     "weth",
     "wbtc",
     "wsteth",
     "reth",
     "cbeth",
-    "usdc",
-    "usdt",
 ]
 T2 = [t.symbol for t in Tokens if (t.symbol not in STABLECOINS) and (t.symbol not in T1)]
 
 # TODO: Abstract
 def get_init_collateral_usd(sym):
-    if sym in BLUE_CHIP:
+    if sym in T1:
         return 200_000_000
     elif sym in T2:
         return 20_000_000
@@ -39,6 +37,7 @@ def get_init_collateral_usd(sym):
         raise ValueError
 
 
+# TODO: Abstract PriceGenerator
 def heuristic_drawdown(s1, s2, drawdowns):
     try:
         # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
@@ -49,6 +48,7 @@ def heuristic_drawdown(s1, s2, drawdowns):
         hist_dd = 0.25
 
     # Handle super low drawdown cases for LSTs, stablecoin depeg
+    # TODO: better parameterize these heuristic consts
     if hist_dd < 0.1:
         return max(hist_dd * 1.5, 0.02)
 
@@ -84,7 +84,7 @@ def simulate_insolvency(
     collateral_tokens = initial_collateral_usd / initial_collateral_price
     debt_usd = initial_collateral_usd * ltv
     debt_tokens = debt_usd / initial_debt_price
-    ctd = initial_ctd = collateral_usd / debt_usd  # decreasing ctd --> increasing dtc
+    initial_ctd = collateral_usd / debt_usd
 
     net_collateral_usd = collateral_tokens * initial_collateral_price
     net_debt_usd = debt_tokens * initial_debt_price
@@ -95,7 +95,11 @@ def simulate_insolvency(
         """
         We dont want to explicitly update the collateral asset price
         (or the debt asset's price). What actually matters is that
-        the collateral to debt value has decreased.
+        the collateral to debt value has decreased:
+
+        collat to debt = (collat tokens * collat price) / (debt tokens * debt price)
+        Decreasing the {collat price / debt price} by 0.005% is the same as
+        multiplying it by (1 - 0.005%), hence the scaling by decr_scale
         """
         net_collateral_usd = max(min_collat, net_collateral_usd * decr_scale)
         debt_to_collat = net_debt_usd / net_collateral_usd
@@ -122,15 +126,15 @@ def simulate_insolvency(
 
 
 def main():
+    # TODO: Argparse these arg (decr_scale, liq_bonus, ...)
     decr_scale = 0.995
     liq_bonus = 0.05
     lltvs = [0.01 * x for x in range(40, 100)]
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    symbols = ["crv", "bal", "usdt", "weth", "wsteth", "cbeth", "reth"]
-    symbols = [tok.symbol for tok in AAVE_TOKENS]
-    # symbols = ['usdc', 'usdt', 'dai', 'lusd', 'frax']
+    # symbols = [tok.symbol for tok in AAVE_TOKENS]
+    symbols = ['usdc', 'usdt', 'dai', 'lusd', 'frax']
 
     cg = CoinGecko()
     impacts = json.load(open("../data/swap_sizes.json", "r"))
@@ -165,7 +169,10 @@ def main():
                     opt_ltvs[(sym1, sym2)] = ltv
                     break
 
-    pprint.pp(opt_ltvs)
+    for k, v in opt_ltvs.items():
+        log.info("{:6s} / {:6s}: opt LTV: {:.3f}".format(*k, v))
+
+    # pprint.pp(opt_ltvs)
 
 
 if __name__ == "__main__":
