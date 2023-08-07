@@ -1,18 +1,15 @@
-from logger import Logger
-import os
 import pprint
 import time
-from typing import Any
-from typing import Callable
 
-from tokens import Tokens
+import logger
 from coingecko import CoinGecko
 from cowswap import get_cowswap
 from kyberswap import get_swap_route
 from kyberswap import get_swap_route_usd
+from tokens import Tokens
 
 
-log = Logger().get_logger()
+log = logger.get_logger(__name__)
 MAX_ITERS = 20
 
 
@@ -52,9 +49,7 @@ def price_impact_size(
     iters = 0
     price_impact = 1  # default start to run at least one iter
 
-    st = time.time()
     while abs(1 - (price_impact / target_price_impact)) > rtol and iters < MAX_ITERS:
-        _st = time.time()
         mid = (max_sz + min_sz) / 2.0
         price_impact = kyberswap_oracle(token_in, token_out, mid)
 
@@ -63,9 +58,7 @@ def price_impact_size(
         else:
             max_sz = mid
 
-        # print(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f} | elapsed: {time.time() - st:.2f}s | per query: {time.time() - _st:.3f}s")
-        # TODO: Figure out exact time to avoid rate limiting
-        time.sleep(0.05)
+        # log.info(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f}")
         iters += 1
 
     return (max_sz + mid) / 2.0
@@ -81,10 +74,6 @@ def price_impact_size_cowswap(
     rtol=5e-2,
     max_sz_usd=500_000_000,
 ):
-    cg = CoinGecko()
-    spot_in = cg.current_price(token_in)
-    spot_out = cg.current_price(token_out)
-
     def cowswap_oracle(token_in, token_out, size, retries=3):
         response = get_cowswap(
             token_in, token_out, token_in_decimals, size, quality="fast"
@@ -100,7 +89,7 @@ def price_impact_size_cowswap(
         price_impact = 1 - float(amount_out_usd / amount_in_usd)
         return price_impact
 
-    coingecko = CoinGecko()
+    cg = CoinGecko()
     spot_in = cg.current_price(token_in)
     spot_out = cg.current_price(token_out)
     min_sz = 0
@@ -108,9 +97,7 @@ def price_impact_size_cowswap(
     iters = 0
     price_impact = 1
 
-    st = time.time()
     while abs(1 - (price_impact / target_price_impact)) > rtol and iters < MAX_ITERS:
-        _st = time.time()
         mid = (max_sz + min_sz) / 2.0
         price_impact = cowswap_oracle(token_in, token_out, mid)
 
@@ -119,17 +106,14 @@ def price_impact_size_cowswap(
         else:
             max_sz = mid
 
-        log.info(
-            f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f} | elapsed: {time.time() - st:.2f}s | per query: {time.time() - _st:.3f}s"
-        )
+        log.info(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f}")
         iters += 1
     return (max_sz + mid) / 2.0
 
 
 if __name__ == "__main__":
     pis = {}
-
-    for tok in [Tokens.USDC, Tokens.WETH]:
+    for tok in [Tokens.UNI, Tokens.WETH, Tokens.WSTETH, Tokens.CBETH, Tokens.RETH]:
         pis[tok.symbol] = {}
         tok_out = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
@@ -142,7 +126,7 @@ if __name__ == "__main__":
                 p,
                 max_sz_usd=1_000_000_000,
             )
-            print(tok, p, pis[tok.symbol][p])
+            log.info(tok, p, pis[tok.symbol][p])
         log.info("-" * 20)
 
     pprint.pp(pis)

@@ -3,7 +3,8 @@ import time
 import pickle
 from cowswap import get_impact
 from utils import price_impact_size_cowswap
-from constants import TOKENS, SYMBOL_MAP
+from constants import SYMBOL_MAP
+from tokens import Tokens
 
 def compute_impacts():
     impact_sizes = {}
@@ -17,7 +18,7 @@ def compute_impacts():
     usdc = SYMBOL_MAP['usdc']
 
     st = time.time()
-    for tok in TOKENS:
+    for tok in Tokens:
         impact_sizes[tok.symbol] = {}
 
         for i in impacts:
@@ -25,13 +26,11 @@ def compute_impacts():
         print("Done with {} | {} | Elapsed: {:.2f}min".format(tok.symbol, i , (time.time() - st)/60 ))
         print('-' * 40)
 
-    # now save it somewhere
-    with open("../data/swap_sizes.pkl", "wb") as f:
-        pickle.dump(impact_sizes, f)
+    return impact_sizes
 
 def load_impacts():
-    with open("../data/swap_sizes.pkl", "rb") as f:
-        return pickle.load(f)
+    with open("../data/swap_sizes.json", "rb") as f:
+        return json.load(f)
 
 def sanity_check():
     impacts = load_impacts()
@@ -47,7 +46,6 @@ def sanity_check():
             print("{:6s} | expected impact: {:.3f} | computed impact: {:.3f} | deviation: {:.4f} | abs dev: {:.4f}".format(tok.symbol, p, impact, deviation, abs_dev))
 
 if __name__ == '__main__':
-    compute_impacts()
     data = load_impacts()
     datajs = json.dumps(data)
 

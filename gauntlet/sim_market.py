@@ -1,13 +1,17 @@
-import json
 import pickle
+import json
 import pprint
 
+import logger
+from tokens import Tokens
 from coingecko import CoinGecko
+from constants import STABLECOINS
 from constants import SYMBOL_MAP
+from constants import AAVE_TOKENS
 
-T2 = {"link", "bal", "mkr", "ldo", "uni"}
+log = logger.get_logger(__name__)
 
-T1 = BCHIPS = BLUE_CHIP = {
+T1 = BCHIPS = BLUE_CHIP = [
     "weth",
     "wbtc",
     "wsteth",
@@ -15,16 +19,51 @@ T1 = BCHIPS = BLUE_CHIP = {
     "cbeth",
     "usdc",
     "usdt",
-}
+]
+T2 = [t.symbol for t in Tokens if (t.symbol not in STABLECOINS) and (t.symbol not in T1)]
 
-
-def get_init_collateral_usd(sym1, sym2):
-    if sym1 in BLUE_CHIP:
+# TODO: Abstract
+def get_init_collateral_usd(sym):
+    if sym in BLUE_CHIP:
         return 200_000_000
-    elif sym1 in T2:
+    elif sym in T2:
         return 20_000_000
+    elif sym in {"usdc", "dai", "usdt"}:
+        return 500_000_000
+    elif sym == "frax":
+        return 250_000_000
+    elif sym == "lusd":
+        return 12_500_000
     else:
-        breakpoint()
+        log.error(f"Getting init collateral for {sym} doesnt match existing cases")
+        raise ValueError
+
+
+def heuristic_drawdown(s1, s2, drawdowns):
+    try:
+        # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
+        # 30 day 99th percentile drawdown in ratio change of s1/s2
+        hist_dd = drawdowns[(s1, s2)][30][99]
+    except:
+        # default hist dd
+        hist_dd = 0.25
+
+    # Handle super low drawdown cases for LSTs, stablecoin depeg
+    if hist_dd < 0.1:
+        return max(hist_dd * 1.5, 0.02)
+
+    if s1 in T1 and s2 in T1:
+        dd =  0.25
+    elif s1 in T2 and s2 in T2:
+        dd =  0.5
+    elif s1 in T1 and s2 in T2:
+        dd =  0.35
+    elif s1 in T2 and s2 in T1:
+        dd = 0.35
+    else:
+        dd = 0.3 # TODO: double check cases
+
+    return max(dd, hist_dd)
 
 
 def simulate_insolvency(
@@ -35,12 +74,9 @@ def simulate_insolvency(
     ltv,
     repay_amount_usd,
     liq_bonus,
-    max_drawdown=0.3,
-    decr_scale=0.995,
-    symbol1="",
-    symbol2="",
+    max_drawdown,
+    decr_scale,
 ):
-    drawdown_buffer = 0.02
     if 1 - ltv > max_drawdown:
         return 0
 
@@ -50,12 +86,10 @@ def simulate_insolvency(
     debt_tokens = debt_usd / initial_debt_price
     ctd = initial_ctd = collateral_usd / debt_usd  # decreasing ctd --> increasing dtc
 
-    insolvency = 0
-    max_iters = 100000
-
-    net_collateral = collateral_tokens * initial_collateral_price
-    net_debt = debt_tokens * initial_debt_price
+    net_collateral_usd = collateral_tokens * initial_collateral_price
+    net_debt_usd = debt_tokens * initial_debt_price
     min_collat = initial_ctd * (1 - max_drawdown)
+    insolvency = 0
 
     for i in range(1000):
         """
@@ -63,102 +97,73 @@ def simulate_insolvency(
         (or the debt asset's price). What actually matters is that
         the collateral to debt value has decreased.
         """
-        net_collateral = max(min_collat, net_collateral * decr_scale)
-        ctd = (net_collateral / net_debt) * decr_scale
+        net_collateral_usd = max(min_collat, net_collateral_usd * decr_scale)
+        debt_to_collat = net_debt_usd / net_collateral_usd
 
-        dtc = 1 / ctd
-        if dtc >= ltv:
+        if debt_to_collat >= ltv:
             collateral_claimed_usd = min(
-                min(net_debt, repay_amount_usd) * (1 + liq_bonus),
-                net_collateral,
+                min(net_debt_usd, repay_amount_usd) * (1 + liq_bonus),
+                net_collateral_usd,
             )
 
-            net_collateral -= collateral_claimed_usd
-            net_debt -= collateral_claimed_usd / (1 + liq_bonus)
+            net_collateral_usd -= collateral_claimed_usd
+            net_debt_usd -= collateral_claimed_usd / (1 + liq_bonus)
 
-        if net_collateral == 0:
-            insolvency = net_debt
+        if net_collateral_usd == 0:
+            insolvency = net_debt_usd
             return insolvency
 
-        if net_debt == 0:
+        if net_debt_usd == 0:
             insolvency = 0
             return insolvency
 
+    insolvency = net_debt_usd
     return insolvency
-
-
-# TODO:
-def heuristic_drawdown(s1, s2):
-    if s1 in T2 and s2 in T2:
-        return 0.5
-    elif s1 in T1 and s2 in T2:
-        return 0.35
-    elif s1 in T2 and s2 in T1:
-        return 0.35
-    elif s1 in T1 and s2 in T1:
-        return 0.25
-    else:
-        breakpoint()
 
 
 def main():
     decr_scale = 0.995
-    lltvs = [0.01 * x for x in range(50, 100)]
-    sym_ltvs = {}
+    liq_bonus = 0.05
+    lltvs = [0.01 * x for x in range(40, 100)]
+    stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    symbols = [
-        "wsteth",
-        "weth",
-        "usdc",
-        "link",
-        "uni",
-    ]
+    symbols = ["crv", "bal", "usdt", "weth", "wsteth", "cbeth", "reth"]
+    symbols = [tok.symbol for tok in AAVE_TOKENS]
+    # symbols = ['usdc', 'usdt', 'dai', 'lusd', 'frax']
 
     cg = CoinGecko()
     impacts = json.load(open("../data/swap_sizes.json", "r"))
     prices = {s: cg.current_price(SYMBOL_MAP[s].address) for s in symbols}
-    repay_amnts = {s: impacts[s]["0.005"] * prices[s] for s in symbols if s != "usdc"}
-    repay_amnts["usdc"] = repay_amnts["usdt"] = 100_000_000
-    print("repay amounts:")
-    print(repay_amnts)
+    drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", 'rb'))
+    repay_amnts = {s: impacts[s]["0.005"] * prices[s] for s in symbols}
+    log.info(f"repay amounts: {repay_amnts}")
 
-    for idx, sym1 in enumerate(symbols):
-        for j, sym2 in enumerate(symbols):
+    for sym1 in symbols:
+        for sym2 in symbols:
             if sym1 == sym2:
                 continue
 
-            opt_ltvs[(sym1, sym2)] = []
-            sym_ltvs[(sym1, sym2)] = {}
-            for p in [95]:
-                print("-" * 90)
+            _lltvs = stable_lltvs if (sym1 in STABLECOINS and sym2 in STABLECOINS) else lltvs
+            repay_amount_usd = min(repay_amnts[sym1], repay_amnts[sym2])
+            max_dd = heuristic_drawdown(sym1, sym2, drawdowns)
+            init_cusd = get_init_collateral_usd(sym1)
+            log.debug(f"{sym1} / {sym2} | repay amount: {repay_amount_usd:.2f} | drawdown: {max_dd:.3f} | init collat usd: {init_cusd}")
+            for ltv in _lltvs:
+                insolvency = simulate_insolvency(
+                    initial_collateral_usd=init_cusd,
+                    initial_collateral_price=prices[sym1],
+                    initial_debt_price=prices[sym2],
+                    ltv=ltv,
+                    repay_amount_usd=repay_amount_usd,
+                    liq_bonus=liq_bonus,
+                    max_drawdown=max_dd,
+                    decr_scale=decr_scale,
+                )
 
-                sym_ltvs[(sym1, sym2)][p] = {}
-                ltvs = sym_ltvs[(sym1, sym2)][p]
-                repay_amount_usd = min(repay_amnts[sym1], repay_amnts[sym2])
-
-                for ltv in lltvs:
-                    initial_collateral_usd = get_init_collateral_usd(sym1, sym2)
-                    insolvency = simulate_insolvency(
-                        initial_collateral_usd=initial_collateral_usd,
-                        initial_collateral_price=prices[sym1],
-                        initial_debt_price=prices[sym2],
-                        ltv=ltv,
-                        repay_amount_usd=repay_amount_usd,
-                        liq_bonus=0.08,
-                        max_drawdown=heuristic_drawdown(sym1, sym2),
-                        decr_scale=decr_scale,
-                        symbol1=sym1,
-                        symbol2=sym2,
-                    )
-
-                    if insolvency > 0:
-                        print(
-                            f"First nonzero ltv for {sym1}, {sym2}: {ltv}" + \
-                            f"| Repay: {repay_amount_usd} | {insolvency}"
-                        )
-                        opt_ltvs[(sym1, sym2)] = ltv
-                        break
+                if insolvency > 0:
+                    opt_ltvs[(sym1, sym2)] = ltv
+                    break
 
     pprint.pp(opt_ltvs)
 

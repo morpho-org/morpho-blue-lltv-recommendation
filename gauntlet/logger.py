@@ -1,9 +1,12 @@
 import logging
 import os
 
+def get_logger(name):
+    return Logger(name).logger
+
 class Logger:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, name):
+        self.logger = logging.getLogger(name)
 
         # Set the log level
         log_level = os.getenv('LOG_LEVEL', 'INFO').upper()

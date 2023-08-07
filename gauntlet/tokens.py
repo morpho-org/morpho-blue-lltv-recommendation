@@ -29,10 +29,10 @@ class Tokens(Enum):
     CRV = TokenData(symbol="crv", address='0xd533a949740bb3306d119cc777fa900ba034cd52', decimals=18, coingecko_id='curve-dao-token')
     USDC = TokenData(symbol="usdc", address='0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', decimals=6, coingecko_id='usd-coin')
     USDT = TokenData(symbol="usdt", address='0xdac17f958d2ee523a2206206994597c13d831ec7', decimals=6, coingecko_id='tether')
-    DAI = TokenData(symbol="DAI", address="0x6b175474e89094c44da98b954eedeac495271d0f", decimals=18, coingecko_id="dai")
-    LUSD = TokenData(symbol="LUSD", address="0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals=18, coingecko_id="liquity-usd")
-    FRAX = TokenData(symbol="FRAX", address="0x853d955acef822db058eb8505911ed77f175b99e", decimals=18, coingecko_id="frax")
-    COMP = TokenData(symbol="COMP", address="", decimals=18, coingecko_id="")
+    DAI = TokenData(symbol="dai", address="0x6b175474e89094c44da98b954eedeac495271d0f", decimals=18, coingecko_id="dai")
+    LUSD = TokenData(symbol="lusd", address="0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals=18, coingecko_id="liquity-usd")
+    FRAX = TokenData(symbol="frax", address="0x853d955acef822db058eb8505911ed77f175b99e", decimals=18, coingecko_id="frax")
+    COMP = TokenData(symbol="comp", address="0xc00e94cb662c3520282e6f5717214004a7f26888", decimals=18, coingecko_id="compound-governance-token")
 
     @property
     def symbol(self):

@@ -13,13 +13,13 @@ ID_MAP = {
 }
 
 
-STABLECOINS = {
+STABLECOINS = {t.symbol for t in [
     Tokens.USDC,
     Tokens.USDT,
     Tokens.DAI,
     Tokens.FRAX,
     Tokens.LUSD,
-}
+]}
 
 AAVE_TOKENS = [
     Tokens.AAVE,

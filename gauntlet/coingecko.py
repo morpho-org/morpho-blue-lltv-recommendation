@@ -7,6 +7,7 @@ import json
 
 import pandas as pd
 import requests
+from tokens import Tokens
 
 def get_coingecko_api_key():
     return os.environ.get("COINGECKO_API_KEY")
@@ -135,18 +136,9 @@ def ms_to_dt(ms):
 
 
 if __name__ == "__main__":
-    usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-    usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7"
-    weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
-    steth = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
-    wsteth = "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
-
+    tok = Tokens.USDC
     api = CoinGecko()
-    for i in range(10):
-        st = time.time()
-        info = api.token_info(usdc)
-        print("i = {} | Time for token info call: {:.2f}s".format(i, time.time() - st))
-
-    price = api.current_price(usdc)
-    market_chart = api.market_chart(usdc)
-    ohlc = api.ohlc("usd-coin")
+    info = api.token_info(tok.address)
+    price = api.current_price(tok.address)
+    market_chart = api.market_chart(tok.address)
+    ohlc = api.ohlc(tok.coingecko_id)

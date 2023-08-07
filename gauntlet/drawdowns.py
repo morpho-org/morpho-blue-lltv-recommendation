@@ -110,19 +110,9 @@ def get_price_ratios():
             ratios[(a, b)] = prices[a] / prices[b]
     return ratios
 
-def rolling_betas(window_size=30):
-    prices = load_prices()
-
-    for x in SYMBOL_MAP:
-        for y in SYMBOL_MAP:
-            if x == y:
-                continue
-
-            # otherwise, compute rollin
 
 if __name__ == '__main__':
-    # drawdowns = compute_drawdowns() # symbol -> np array
-    # prices = load_prices()
+    save_prices()
     st = time.time()
     dd = compute_window_drawdowns()
     pickle.dump(dd, open("../data/drawdowns.pkl", "wb"))
@@ -134,5 +124,3 @@ if __name__ == '__main__':
     pickle.dump(ps, open("../data/pairwise_drawdowns.pkl", "wb"))
     end = time.time()
     print("Pairwise Elapsed: {:.2f}s".format(end - st))
-    # ratios = get_price_ratios()
-    breakpoint()
