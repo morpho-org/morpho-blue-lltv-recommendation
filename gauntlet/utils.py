@@ -13,13 +13,6 @@ log = logger.get_logger(__name__)
 MAX_ITERS = 20
 
 
-def calculate_max_drawdown(prices, period_length):
-    rolling_max = prices.rolling(period_length, min_periods=1).max()
-    daily_drawdown = prices / rolling_max - 1.0
-    max_drawdown = daily_drawdown.rolling(period_length, min_periods=1).min()
-    return max_drawdown
-
-
 def price_impact_size(
     token_in: str,
     token_in_decimals: int,
@@ -108,7 +101,7 @@ def price_impact_size_cowswap(
 
         log.info(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f}")
         iters += 1
-    return (max_sz + mid) / 2.0
+    return (max_sz + min_sz) / 2.0
 
 
 if __name__ == "__main__":

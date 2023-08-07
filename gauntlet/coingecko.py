@@ -37,8 +37,6 @@ class API(ABC):
         elif dt > period_length or self._calls_in_period < self.requests_per_minute:
             # no need to wait since the elapsed time is long enough
             return 0
-        # else:
-        # not sure
 
     def make_request(self, **request_kwargs) -> requests.request:
         wt = self.calculate_wait_time()
@@ -49,8 +47,11 @@ class API(ABC):
             self._calls_in_period = 0
 
         self._calls_in_period += 1
-        header =  {"x-cg-pro-api-key": get_coingecko_api_key()}
-        request_kwargs = {**request_kwargs, "headers": header}
+        request_kwargs = {**request_kwargs}
+        header = self.get_header()
+        if header:
+            request_kwargs['header'] = header
+
         response = requests.get(**request_kwargs)
         if not response.ok:
             response.raise_for_status()
@@ -64,6 +65,10 @@ class CoinGecko(API):
     CHAIN_IDS = {"ethereum": 1}
     PUBLIC_URL = "https://api.coingecko.com/api/v3"
     PRO_URL = "https://pro-api.coingecko.com/api/v3"
+
+    def get_header(self):
+        return {"x-cg-pro-api-key": get_coingecko_api_key()}
+
 
     @property
     def api_url(self):
