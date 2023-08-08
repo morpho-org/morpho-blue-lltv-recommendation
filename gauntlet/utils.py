@@ -64,18 +64,19 @@ def price_impact_size_cowswap(
         else:
             max_sz = mid
 
-        log.debug(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f}")
+        log.debug(f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f} | swap total: ${mid * spot_in/1e6:.2f}mil")
         iters += 1
     return (max_sz + min_sz) / 2.0
 
 
 if __name__ == "__main__":
     pis = {}
-    for tok in [Tokens.UNI, Tokens.WETH, Tokens.WSTETH, Tokens.CBETH, Tokens.RETH]:
+    # for tok in [Tokens.UNI, Tokens.WETH, Tokens.WSTETH, Tokens.CBETH, Tokens.RETH]:
+    for tok in [Tokens.USDC, Tokens.USDT, Tokens.FRAX, Tokens.LUSD]:
         pis[tok.symbol] = {}
         tok_out = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
-        for p in [0.005, 0.25]:
+        for p in [0.25]:
             pis[tok.symbol][p] = price_impact_size_cowswap(
                 tok.address,
                 tok.decimals,

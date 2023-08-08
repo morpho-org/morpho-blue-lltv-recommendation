@@ -18,13 +18,8 @@ def compute_impacts(impacts: list[float]) -> dict[str, dict[int, dict[float, flo
     impact_sizes = {}
 
     for tok in Tokens:
-        if len(impact_sizes) == 2:
-            break
         impact_sizes[tok.symbol] = {}
-        if tok == Tokens.USDC:
-            tgt = Tokens.USDT
-        else:
-            tgt = Tokens.USDC
+        tgt = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
         for i in impacts:
             impact_sizes[tok.symbol][i] = price_impact_size_cowswap(

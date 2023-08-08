@@ -20,18 +20,13 @@ def ms_to_dt(ms):
 @dataclass
 class API(ABC):
     def __init__(self):
-        self._last_call_time = 0  # time since last api request
-        self._last_call_time = 0
-        self._calls_in_period = 0
+        self._last_call_time = 0  # time of last request
+        self._calls_in_period = 0 # number of api requests in the current period
 
     @property
     @abstractmethod
     def requests_per_minute(self, request) -> float:
         raise NotImplementedError
-
-    @property
-    def period_duration(self):
-        return 60 / self.requests_per_minute
 
     def calculate_wait_time(self) -> float:
         dt = time.time() - self._last_call_time
@@ -44,15 +39,20 @@ class API(ABC):
             return 0
 
     def make_request(self, **request_kwargs) -> requests.request:
+        '''
+        This function handles making the api request while potentially
+        sleeping to avoid hitting the API request limit.
+        '''
         wt = self.calculate_wait_time()
 
         if wt > 0:
-            time.sleep(wt)  # Obey the rate limit
+            # Obey the rate limit
+            time.sleep(wt)
             self._last_call_time = time.time()
+            # reset the counter
             self._calls_in_period = 0
 
         self._calls_in_period += 1
-        request_kwargs = {**request_kwargs}
         header = self.get_header()
         if header:
             request_kwargs["headers"] = header
@@ -146,6 +146,10 @@ class CoinGecko(API):
         return df
 
     def get_coingecko_api_key(self) -> Optional[str]:
+        '''
+        If users have a pro CoinGecko api key, they can use it by setting
+        setting the `COINGECKO_API_KEY` env var to their key.
+        '''
         return os.environ.get("COINGECKO_API_KEY")
 
 

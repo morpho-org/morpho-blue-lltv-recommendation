@@ -5,5 +5,5 @@ necessary packages.
 # Running the Sim
 ```
 cd gauntlet
-python sim_market.py
+python sim.py
 ```
