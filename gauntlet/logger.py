@@ -5,7 +5,7 @@ def get_logger(name):
     return Logger(name).logger
 
 class Logger:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.logger = logging.getLogger(name)
 
         # Set the log level
@@ -18,9 +18,11 @@ class Logger:
         # Create a console handler
         ch = logging.StreamHandler()
         ch.setLevel(numeric_level)
+
+        # Log with the time, log level, file name, line number
         formatter = logging.Formatter('[%(asctime)s][%(levelname)s][%(filename)s:%(lineno)d] %(message)s')
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
-    def get_logger(self):
+    def get_logger(self) -> logging.Logger:
         return self.logger
