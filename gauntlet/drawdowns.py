@@ -1,17 +1,30 @@
+from typing import Tuple
 import pickle
-import time
+
 import numpy as np
 import pandas as pd
-from constants import SYMBOL_MAP
 from coingecko import CoinGecko
+from constants import SYMBOL_MAP
 
-def load_ohlcs():
+
+def load_ohlcs() -> dict[str, pd.DataFrame]:
+    """
+    Loads the cached OHLC data.
+    The OHLC csvs are assumed to be in:
+    "morpho/ohlc/{token symbol}.csv"
+    """
     ohlcs = {}
-    for sym in SYMBOL_MAP.keys():
+    for sym in SYMBOL_MAP:
         ohlcs[sym] = pd.read_csv(f"../ohlc/{sym}.csv")
     return ohlcs
 
+
 def save_prices(start_date="2022-07-01"):
+    """
+    Queries CoinGecko api for the historical price data of all
+    tokens in SYMBOL_MAP and saves the resulting price dataframes
+    to csvs.
+    """
     cg = CoinGecko()
     prices = {}
     for sym, tok in SYMBOL_MAP.items():
@@ -22,45 +35,57 @@ def save_prices(start_date="2022-07-01"):
 
     return prices
 
-def load_prices():
+
+def load_prices() -> dict[str, pd.DataFrame]:
+    """
+    Loads the cached price data for all symbols/tokens.
+    This assumes that the token price data is saved in the
+    following format:
+    "morpho/prices/{token_symbol}.csv"
+    """
     prices = {}
 
     for sym in SYMBOL_MAP.keys():
         prices[sym] = pd.read_csv(f"../prices/{sym}.csv")
         prices[sym].set_index("date", inplace=True)
-        prices[sym] = prices[sym]['prices']["2022-07-01":]
+        prices[sym] = prices[sym]["prices"]["2022-07-01":]
 
     return prices
+
 
 def calc_drawdown(window):
     return (max(window) - window[-1]) / max(window)
 
-def get_drawdowns(df, drawdowns=[90, 95, 99, 99.9], days=[2, 7, 14, 30]):
+
+def get_drawdowns(
+    df: pd.DataFrame,
+    drawdowns: list[int] = [90, 95, 99, 99.9],
+    days: list[int] = [2, 7, 14, 30],
+) -> dict[dict[]]:
+    '''
+    Computes various percentile drawdowns over a time horizon of some number
+    of days, as specified by the input drawdowns, days lists.
+
+    df: pd.DataFrame, dataframe of prices of a given token
+    drawdowns: list[int], percentile of drawdowns to compute
+    days: list[int], time horizon to consider for the drawdowns (in days)
+    '''
     vals = {
         d: {
-            p: np.percentile(df.rolling(d).apply(calc_drawdown)[d-1:], p)
+            p: np.percentile(df.rolling(d).apply(calc_drawdown)[d - 1 :], p)
             for p in drawdowns
         }
-        for  d in days
+        for d in days
     }
     return vals
 
-def compute_window_drawdowns():
+
+def compute_pairwise_window_drawdowns() -> dict[Any]:
     '''
-    Output is a dict:
-    - output[symbol][num drawdown window][percentile]
-    Ex: output['weth'][7][90]
+    Computes drawdowns over ratios of prices of tokens. Token price
+    data is loaded from the stored cache to be able to compute
+    these drawdowns. 
     '''
-    prices = load_prices()
-    drawdowns = {}
-
-    for sym, tok in SYMBOL_MAP.items():
-        df = prices[sym]
-        drawdowns[sym] =  get_drawdowns(df, [90, 95, 99, 99.9], [2, 7, 14, 30])
-
-    return drawdowns
-
-def compute_pairwise_window_drawdowns():
     prices = load_prices()
     drawdowns = {}
 
@@ -71,34 +96,17 @@ def compute_pairwise_window_drawdowns():
 
             n = min(len(prices[x]), len(prices[y]))
             df = prices[x][-n:] / prices[y][-n:]
-            drawdowns[(x, y)] =  get_drawdowns(df, [90, 95, 99, 99.9], [2, 7, 14, 30])
+            drawdowns[(x, y)] = get_drawdowns(df, [90, 95, 99, 99.9], [2, 7, 14, 30])
+        log.info("Done with", y)
 
     return drawdowns
 
 
-def compute_drawdowns():
-    prices = load_prices()
-    ohlcs = load_ohlcs()
-    drawdowns = {
-        sym: (o['high'] - o['low']) / o['open'] for sym, o in ohlcs.items()
-    }
-
-    drawdown_pctiles = {
-        sym: np.percentile(drawdowns[sym], [90, 95, 99])
-        for sym in SYMBOL_MAP
-    }
-    drawdowns_99 = {sym: x[2] for sym, x in drawdown_pctiles.items()}
-    drawdowns_95 = {sym: x[1] for sym, x in drawdown_pctiles.items()}
-    drawdowns_90 = {sym: x[0] for sym, x in drawdown_pctiles.items()}
-
-    # TODO: this is gross
-    drawdowns = {
-        sym: {90: drawdowns_90[sym], 95: drawdowns_95[sym], 99: drawdowns_99[sym]}
-        for sym in SYMBOL_MAP
-    }
-    return drawdowns
-
-def get_price_ratios():
+def get_price_ratios() -> dict[Tuple[str, str], pd.DataFrame]:
+    '''
+    Returns a dict of tuple of token symbols (str) to a dataframe of
+    the ratio of the two tokens' prices.
+    '''
     prices = load_prices()
     ratios = {}
 
@@ -111,16 +119,8 @@ def get_price_ratios():
     return ratios
 
 
-if __name__ == '__main__':
-    save_prices()
-    st = time.time()
-    dd = compute_window_drawdowns()
-    pickle.dump(dd, open("../data/drawdowns.pkl", "wb"))
-    end = time.time()
-    print("Elapsed: {:.2f}s".format(end - st))
-
-    st = time.time()
+if __name__ == "__main__":
+    start_date = "2022-07-01"
+    save_prices(start_date)
     ps = compute_pairwise_window_drawdowns()
     pickle.dump(ps, open("../data/pairwise_drawdowns.pkl", "wb"))
-    end = time.time()
-    print("Pairwise Elapsed: {:.2f}s".format(end - st))
