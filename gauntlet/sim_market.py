@@ -180,7 +180,7 @@ def main():
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    # symbols =
+    # tokens = AAVE_TOKENS
     tokens = [Tokens.USDC, Tokens.USDT, Tokens.DAI, Tokens.LUSD, Tokens.FRAX]
 
     cg = CoinGecko()
