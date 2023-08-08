@@ -129,10 +129,9 @@ def simulate_insolvency(
     - decr_scale: float, proportion to scale the collateral value by at each timestep
         decr_scale \in [0, 1] so the collateral value always decreases.
     """
-    """
-    As an illustration, consider that the
-
-    """
+    # ltv * (1 + liq_bonus) represents the value at which insolvencies can start to happen.
+    # If the maximum drawdown doesnt reach this point, we will not observe any insolvent debt
+    # so skip the computation.
     if ltv * (1 + liq_bonus) < (1 - max_drawdown):
         return 0
 
@@ -151,11 +150,13 @@ def simulate_insolvency(
 
     for i in range(1000):
         """
-        In our methodology, we decrease the ratio of the collateral token's price
-        to debt token's price at each step. In practice, it is easier
-        to just pretend as if only the collateral token's price changes.
+        To be precise, what we really do in the methodology is decrease the
+        ratio of the collateral token's price to debt token's price
+        at each step. In practice, it is easier to pretend that only
+        the collateral token's price changes.
         The ratio of the collateral value to the debt value ends up being the
-        same so this is fine.
+        same under both calculations, which is what ultimately is compared against
+        ltv to determine liquidation eligibility, so this is fine.
         """
         # TODO: Abstract state update
         collateral_price = max(min_collateral_price, collateral_price * decr_scale)
