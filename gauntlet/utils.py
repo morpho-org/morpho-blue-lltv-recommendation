@@ -1,5 +1,5 @@
+import datetime
 import pprint
-import time
 
 import logger
 from coingecko import CoinGecko
@@ -11,6 +11,12 @@ from tokens import Tokens
 
 log = logger.get_logger(__name__)
 MAX_ITERS = 20
+
+
+def ms_to_dt(ms):
+    timestamp_seconds = ms / 1000
+    dt_object = datetime.datetime.fromtimestamp(timestamp_seconds)
+    return dt_object.strftime("%Y-%m-%d")
 
 
 def price_impact_size(
