@@ -1,48 +1,54 @@
-import pickle
 import json
+import pickle
 import pprint
+from typing import Tuple
 
 import logger
-from tokens import Tokens
 from coingecko import CoinGecko
-from constants import STABLECOINS
-from constants import SYMBOL_MAP
 from constants import AAVE_TOKENS
+from constants import STABLECOINS
+from tokens import Tokens
 
 log = logger.get_logger(__name__)
 
-T1 = [
-    "weth",
-    "wbtc",
-    "wsteth",
-    "reth",
-    "cbeth",
-]
-T2 = [t.symbol for t in Tokens if (t.symbol not in STABLECOINS) and (t.symbol not in T1)]
+T1 = {
+    Tokens.WETH,
+    Tokens.WBTC,
+    Tokens.WSTETH,
+    Tokens.RETH,
+    Tokens.CBETH,
+}
+T2 = {t for t in Tokens if (t not in STABLECOINS) and (t not in T1)}
+
 
 # TODO: Abstract
-def get_init_collateral_usd(sym):
-    if sym in T1:
+def get_init_collateral_usd(tok: Tokens) -> float:
+    if tok in T1:
         return 200_000_000
-    elif sym in T2:
+    elif tok in T2:
         return 20_000_000
-    elif sym in {"usdc", "dai", "usdt"}:
+    # TODO: stablecoins can use 25% price impact instead probably
+    elif tok in {Tokens.USDC, Tokens.DAI, Tokens.USDT}:
         return 500_000_000
-    elif sym == "frax":
+    elif tok == Tokens.FRAX:
         return 250_000_000
-    elif sym == "lusd":
+    elif tok == Tokens.LUSD:
         return 12_500_000
     else:
-        log.error(f"Getting init collateral for {sym} doesnt match existing cases")
+        log.error(
+            f"Getting init collateral for {tok.symbol} doesnt match existing cases"
+        )
         raise ValueError
 
 
 # TODO: Abstract PriceGenerator
-def heuristic_drawdown(s1, s2, drawdowns):
+def heuristic_drawdown(
+    t1: Tokens, t2: Tokens, drawdowns: dict[Tuple[str, str], float]
+) -> float:
     try:
         # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
-        # 30 day 99th percentile drawdown in ratio change of s1/s2
-        hist_dd = drawdowns[(s1, s2)][30][99]
+        # 30 day 99th percentile drawdown in ratio change of t1/t2
+        hist_dd = drawdowns[(t1.symbol, t2.symbol)][30][99]
     except:
         # default hist dd
         hist_dd = 0.25
@@ -52,31 +58,31 @@ def heuristic_drawdown(s1, s2, drawdowns):
     if hist_dd < 0.1:
         return max(hist_dd * 1.5, 0.02)
 
-    if s1 in T1 and s2 in T1:
-        dd =  0.25
-    elif s1 in T2 and s2 in T2:
-        dd =  0.5
-    elif s1 in T1 and s2 in T2:
-        dd =  0.35
-    elif s1 in T2 and s2 in T1:
+    if t1 in T1 and t2 in T1:
+        dd = 0.25
+    elif t1 in T2 and t2 in T2:
+        dd = 0.5
+    elif t1 in T1 and t2 in T2:
+        dd = 0.35
+    elif t1 in T2 and t2 in T1:
         dd = 0.35
     else:
-        dd = 0.3 # TODO: double check cases
+        dd = 0.3  # TODO: double check cases
 
     return max(dd, hist_dd)
 
 
 def simulate_insolvency(
     *,
-    initial_collateral_usd,
-    initial_collateral_price,
-    initial_debt_price,
-    ltv,
-    repay_amount_usd,
-    liq_bonus,
-    max_drawdown,
-    decr_scale,
-):
+    initial_collateral_usd: float,
+    initial_collateral_price: float,
+    initial_debt_price: float,
+    ltv: float,
+    repay_amount_usd: float,
+    liq_bonus: float,
+    max_drawdown: float,
+    decr_scale: float,
+) -> float:
     if 1 - ltv > max_drawdown:
         return 0
 
@@ -133,31 +139,36 @@ def main():
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    # symbols = [tok.symbol for tok in AAVE_TOKENS]
-    symbols = ['usdc', 'usdt', 'dai', 'lusd', 'frax']
+    # symbols =
+    tokens = [Tokens.USDC, Tokens.USDT, Tokens.DAI, Tokens.LUSD, Tokens.FRAX]
 
     cg = CoinGecko()
     impacts = json.load(open("../data/swap_sizes.json", "r"))
-    prices = {s: cg.current_price(SYMBOL_MAP[s].address) for s in symbols}
-    drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", 'rb'))
-    repay_amnts = {s: impacts[s]["0.005"] * prices[s] for s in symbols}
+    prices = {t: cg.current_price(t.address) for t in tokens}
+    drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", "rb"))
+    repay_amnts = {t: impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
     log.info(f"repay amounts: {repay_amnts}")
 
-    for sym1 in symbols:
-        for sym2 in symbols:
-            if sym1 == sym2:
+    for tok1 in tokens:
+        for tok2 in tokens:
+            if tok1 == tok2:
                 continue
 
-            _lltvs = stable_lltvs if (sym1 in STABLECOINS and sym2 in STABLECOINS) else lltvs
-            repay_amount_usd = min(repay_amnts[sym1], repay_amnts[sym2])
-            max_dd = heuristic_drawdown(sym1, sym2, drawdowns)
-            init_cusd = get_init_collateral_usd(sym1)
-            log.debug(f"{sym1} / {sym2} | repay amount: {repay_amount_usd:.2f} | drawdown: {max_dd:.3f} | init collat usd: {init_cusd}")
+            _lltvs = (
+                stable_lltvs if (tok1 in STABLECOINS and tok2 in STABLECOINS) else lltvs
+            )
+            repay_amount_usd = min(repay_amnts[tok1], repay_amnts[tok2])
+            max_dd = heuristic_drawdown(tok1, tok2, drawdowns)
+            init_cusd = get_init_collateral_usd(tok1)
+            log.debug(
+                f"{tok1} / {tok2} | repay amount: {repay_amount_usd:.2f}"
+                + f" | drawdown: {max_dd:.3f} | init collat usd: {init_cusd}"
+            )
             for ltv in _lltvs:
                 insolvency = simulate_insolvency(
                     initial_collateral_usd=init_cusd,
-                    initial_collateral_price=prices[sym1],
-                    initial_debt_price=prices[sym2],
+                    initial_collateral_price=prices[tok1],
+                    initial_debt_price=prices[tok2],
                     ltv=ltv,
                     repay_amount_usd=repay_amount_usd,
                     liq_bonus=liq_bonus,
@@ -166,7 +177,7 @@ def main():
                 )
 
                 if insolvency > 0:
-                    opt_ltvs[(sym1, sym2)] = ltv
+                    opt_ltvs[(tok1.symbol, tok2.symbol)] = ltv
                     break
 
     for k, v in opt_ltvs.items():
