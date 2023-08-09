@@ -9,7 +9,9 @@ from typing import Optional
 import pandas as pd
 import requests
 from tokens import Tokens
+import logger
 
+log = logger.get_logger(__name__)
 
 def ms_to_dt(ms):
     timestamp_seconds = ms / 1000
@@ -30,7 +32,7 @@ class API(ABC):
 
     def calculate_wait_time(self) -> float:
         dt = time.time() - self._last_call_time
-        period_length = 60 / self.requests_per_minute
+        period_length = 60
 
         if self._calls_in_period >= self.requests_per_minute:
             return period_length
@@ -47,6 +49,7 @@ class API(ABC):
 
         if wt > 0:
             # Obey the rate limit
+            log.debug(f"Rate limit hit. Sleeping for {wt:.3f}s ...")
             time.sleep(wt)
             self._last_call_time = time.time()
             # reset the counter
@@ -154,9 +157,15 @@ class CoinGecko(API):
 
 
 if __name__ == "__main__":
-    tok = Tokens.USDC
+    usdc = Tokens.USDC
     api = CoinGecko()
-    info = api.token_info(tok.address)
-    price = api.current_price(tok.address)
-    market_chart = api.market_chart(tok.address)
-    ohlc = api.ohlc(tok.coingecko_id)
+    results = []
+
+    for tok in Tokens:
+        price = api.current_price(tok.address)
+        results.append(price)
+        print(f"{len(results):2d} | Token: {tok.symbol:6s} | Spot price: {price:.2f}")
+
+    info = api.token_info(usdc.address)
+    market_chart = api.market_chart(usdc.address)
+    ohlc = api.ohlc(usdc.coingecko_id)
