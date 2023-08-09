@@ -211,10 +211,8 @@ def main(args: argparse.Namespace):
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    tokens = [Tokens.WETH, Tokens.WSTETH, Tokens.WBTC, Tokens.USDC, Tokens.LINK, Tokens.SNX]
-    tokens = [Tokens.WETH, Tokens.WBTC, Tokens.WSTETH, Tokens.USDC, Tokens.LINK, Tokens.UNI]
-    tokens = [Tokens.WETH, Tokens.LINK, Tokens.UNI, Tokens.BAL, Tokens.USDC, Tokens.SNX, Tokens.CRV]
-    tokens = Tokens
+    # tokens = [Tokens.WETH, Tokens.WBTC, Tokens.WSTETH, Tokens.USDC, Tokens.LINK, Tokens.UNI]
+    tokens = [t for t in Tokens]
 
     cg = CoinGecko()
     prices = {t: cg.current_price(t.address) for t in tokens}
