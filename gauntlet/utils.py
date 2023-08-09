@@ -11,6 +11,15 @@ log = logger.get_logger(__name__)
 MAX_ITERS = 20
 
 
+def compute_liquidation_incentive(m: float, beta: float, lltv: float):
+    '''
+    Morpho Blue's proposed liquidation incentive formula
+    m: float, a constant that determines the max liq incentive
+    beta: float, constant
+    lltv: float, liquidation loan to value parameter of the market
+    '''
+    return min(m, (1 / (beta * lltv + (1 - beta))) - 1)
+
 def ms_to_dt(ms):
     timestamp_seconds = ms / 1000
     dt_object = datetime.datetime.fromtimestamp(timestamp_seconds)
@@ -72,11 +81,11 @@ def price_impact_size_cowswap(
 if __name__ == "__main__":
     pis = {}
     # for tok in [Tokens.UNI, Tokens.WETH, Tokens.WSTETH, Tokens.CBETH, Tokens.RETH]:
-    for tok in [Tokens.USDC, Tokens.USDT, Tokens.FRAX, Tokens.LUSD]:
+    for tok in Tokens:
         pis[tok.symbol] = {}
         tok_out = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
-        for p in [0.25]:
+        for p in [0.25, 0.5]:
             pis[tok.symbol][p] = price_impact_size_cowswap(
                 tok.address,
                 tok.decimals,

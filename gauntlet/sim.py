@@ -1,3 +1,4 @@
+import numpy as np
 import argparse
 import json
 import os
@@ -6,9 +7,9 @@ from typing import Tuple
 
 import logger
 from coingecko import CoinGecko
-from constants import AAVE_TOKENS
 from constants import STABLECOINS
 from tokens import Tokens
+from utils import compute_liquidation_incentive
 
 log = logger.get_logger(__name__)
 TOL = 1e-4
@@ -49,7 +50,7 @@ def get_init_collateral_usd(tok: Tokens) -> float:
         return 12_500_000
     else:
         log.error(
-            f"Getting init collateral for {tok.symbol} doesnt match existing cases"
+            f"Init collateral for {tok.symbol} doesnt match existing cases"
         )
         raise ValueError
 
@@ -81,14 +82,10 @@ def heuristic_drawdown(
         dd = 0.25
     elif t1 in T2 and t2 in T2:
         dd = 0.5
-    elif t1 in T1 and t2 in T2:
-        dd = 0.35
-    elif t1 in T2 and t2 in T1:
-        dd = 0.35
     else:
-        dd = 0.3  # TODO: double check cases
+        dd = 0.35
 
-    return min(dd, hist_dd)
+    return max(dd, hist_dd)
 
 
 def simulate_insolvency(
@@ -101,6 +98,7 @@ def simulate_insolvency(
     liq_bonus: float,
     max_drawdown: float,
     decr_scale: float,
+    iters: int,
 ) -> float:
     """
     To simulate the potential insolvencies, we do the following
@@ -145,10 +143,12 @@ def simulate_insolvency(
     net_debt_usd = debt_tokens * debt_price
     min_collateral_price = collateral_price * (1 - max_drawdown)
     insolvency = 0
+    max_iters = int(np.ceil((initial_collateral_usd / repay_amount_usd) + 1))
+    log.debug(f"Running for {max_iters} iters")
     assert abs(initial_collateral_usd - net_collateral_usd) < TOL
     assert abs(debt_usd - net_debt_usd) < TOL
 
-    for i in range(1000):
+    for i in range(max_iters):
         """
         To be precise, what we really do in the methodology is decrease the
         ratio of the collateral token's price to debt token's price
@@ -165,7 +165,7 @@ def simulate_insolvency(
 
         if i % 100 == 0:
             log.debug(
-                f"{i=} | {debt_to_collat=:.2f} | {net_collateral_usd} | {debt_to_collat=}"
+                f"{i=} | {debt_to_collat=:.3f} | {net_collateral_usd=} | {net_debt_usd=} | {ltv=}"
             )
 
         if debt_to_collat >= ltv:
@@ -194,6 +194,8 @@ def simulate_insolvency(
             insolvency = 0
             return insolvency
 
+    assert (net_debt_usd / net_collateral_usd) < ltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
+    return 0
     insolvency = net_debt_usd if (net_debt_usd / net_collateral_usd) >= ltv else 0
     return insolvency
 
@@ -209,8 +211,10 @@ def main(args: argparse.Namespace):
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    tokens = AAVE_TOKENS
-    tokens = [Tokens.USDC, Tokens.USDT, Tokens.DAI, Tokens.LUSD, Tokens.FRAX]
+    tokens = [Tokens.WETH, Tokens.WSTETH, Tokens.WBTC, Tokens.USDC, Tokens.LINK, Tokens.SNX]
+    tokens = [Tokens.WETH, Tokens.WBTC, Tokens.WSTETH, Tokens.USDC, Tokens.LINK, Tokens.UNI]
+    tokens = [Tokens.WETH, Tokens.LINK, Tokens.UNI, Tokens.BAL, Tokens.USDC, Tokens.SNX, Tokens.CRV]
+    tokens = Tokens
 
     cg = CoinGecko()
     prices = {t: cg.current_price(t.address) for t in tokens}
@@ -239,15 +243,18 @@ def main(args: argparse.Namespace):
             )
             prev_ltv = _lltvs[0] - 0.005
             for ltv in _lltvs:
+                liq_bonus = compute_liquidation_incentive(args.m, args.beta, ltv)
+                log.debug(f"M = {args.m:.2f}, beta = {args.beta:.2f}, LI = {liq_bonus:.3f}")
                 insolvency = simulate_insolvency(
                     initial_collateral_usd=init_cusd,
                     collateral_price=prices[tok1],
                     debt_price=prices[tok2],
                     ltv=ltv,
                     repay_amount_usd=repay_amount_usd,
-                    liq_bonus=args.liq_bonus,
+                    liq_bonus=liq_bonus,
                     max_drawdown=max_dd,
                     decr_scale=args.decr_scale,
+                    iters=args.iters,
                 )
 
                 # Note: we do not actually care about the size of the insolvency.
@@ -261,8 +268,9 @@ def main(args: argparse.Namespace):
             if (tok1.symbol, tok2.symbol) not in opt_ltvs:
                 opt_ltvs[(tok1.symbol, tok2.symbol)] = max(_lltvs)
 
-    for k, v in opt_ltvs.items():
-        log.info("{:6s} / {:6s}: opt LTV: {:.3f}".format(*k, v))
+    for k, _ltv in opt_ltvs.items():
+        _li = compute_liquidation_incentive(args.m, args.beta, _ltv)
+        log.info("{},{},{:.3f},{:.3f},{:.3f},{:.3f}".format(*k, _ltv, args.m, args.beta, _li))
 
     if not args.save_path:
         return
@@ -285,13 +293,16 @@ if __name__ == "__main__":
         help="Per iter scaling factor of the collateral to debt price ratio",
     )
     parser.add_argument(
-        "--liq_bonus", type=float, default=0.05, help="Liquidation bonus"
-    )
-    parser.add_argument(
         "--save_path", type=str, default="", help="Path to save results"
     )
     parser.add_argument(
         "--iters", type=int, default=1000, help="Number of iterations to run in the sim"
+    )
+    parser.add_argument(
+        "--m", type=float, default=0.15
+    )
+    parser.add_argument(
+        "--beta", type=float, default=0.2
     )
     args = parser.parse_args()
     main(args)

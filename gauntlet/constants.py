@@ -13,26 +13,3 @@ STABLECOINS = [
     Tokens.FRAX,
     Tokens.LUSD,
 ]
-
-AAVE_TOKENS = [
-    Tokens.AAVE,
-    Tokens.ONEINCH,
-    Tokens.LINK,
-    Tokens.WBTC,
-    Tokens.RETH,
-    Tokens.WETH,
-    Tokens.CBETH,
-    Tokens.WSTETH,
-    Tokens.SNX,
-    Tokens.BAL,
-    Tokens.ENS,
-    Tokens.UNI,
-    Tokens.MKR,
-    Tokens.LDO,
-    Tokens.CRV,
-    Tokens.USDC,
-    Tokens.USDT,
-    Tokens.DAI,
-    Tokens.LUSD,
-    Tokens.FRAX,
-]
