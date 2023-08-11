@@ -2,16 +2,17 @@ import datetime
 import os
 import time
 from abc import ABC
-from abc import abstractmethod
+from abc import abstractproperty
 from dataclasses import dataclass
 from typing import Optional
 
+import logger
 import pandas as pd
 import requests
 from tokens import Tokens
-import logger
 
 log = logger.get_logger(__name__)
+
 
 def ms_to_dt(ms):
     timestamp_seconds = ms / 1000
@@ -23,10 +24,9 @@ def ms_to_dt(ms):
 class API(ABC):
     def __init__(self):
         self._last_call_time = 0  # time of last request
-        self._calls_in_period = 0 # number of api requests in the current period
+        self._calls_in_period = 0  # number of api requests in the current period
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def requests_per_minute(self, request) -> float:
         raise NotImplementedError
 
@@ -41,10 +41,10 @@ class API(ABC):
             return 0
 
     def make_request(self, **request_kwargs) -> requests.request:
-        '''
+        """
         This function handles making the api request while potentially
         sleeping to avoid hitting the API request limit.
-        '''
+        """
         wt = self.calculate_wait_time()
 
         if wt > 0:
@@ -90,10 +90,7 @@ class CoinGecko(API):
         Coingecko's advertised public api rate limit is 10-30 calls per minute.
         Source: https://www.coingecko.com/en/api/pricing#:~:text=Our%20Public%20API%20has%20a,the%20next%201%20minute%20window.
         """
-        if self.get_coingecko_api_key():
-            return 500
-        else:
-            return 10
+        return 500 if self.get_coingecko_api_key() else 10
 
     def token_info(self, address: str, chain: str = "ethereum"):
         chain_id = 1 if chain == "ethereum" else None
@@ -126,13 +123,13 @@ class CoinGecko(API):
             response.raise_for_status()
 
         res_js = response.json()
-        res_js["date"] = [ms_to_dt(x[0]) for x in res_js["prices"]]
-        res_js["prices"] = [x[1] for x in res_js["prices"]]
-        res_js["market_caps"] = [x[1] for x in res_js["market_caps"]]
-        res_js["total_volumes"] = [x[1] for x in res_js["total_volumes"]]
+        # results in the response json come in lists of timestamp, field value
+        res_js["date"] = [ms_to_dt(t) for t, _ in res_js["prices"]]
+        res_js["prices"] = [x for _, x in res_js["prices"]]
+        res_js["market_caps"] = [x for _, x in res_js["market_caps"]]
+        res_js["total_volumes"] = [x for _, x in res_js["total_volumes"]]
 
-        df = pd.DataFrame(res_js)
-        df.set_index("date", inplace=True)
+        df = pd.DataFrame(res_js).set_index("date")
         return df
 
     def ohlc(self, cg_token_id: str, currency: str = "usd"):
@@ -144,15 +141,16 @@ class CoinGecko(API):
 
         res = response.json()
         data = [[ms_to_dt(t), *x] for t, *x in res]
-        df = pd.DataFrame(data, columns=["date", "open", "high", "low", "close"])
-        df.set_index("date", inplace=True)
+        df = pd.DataFrame(
+            data, columns=["date", "Open", "High", "Low", "Close"]
+        ).set_index("date")
         return df
 
     def get_coingecko_api_key(self) -> Optional[str]:
-        '''
+        """
         If users have a pro CoinGecko api key, they can use it by setting
         setting the `COINGECKO_API_KEY` env var to their key.
-        '''
+        """
         return os.environ.get("COINGECKO_API_KEY")
 
 
@@ -161,6 +159,7 @@ if __name__ == "__main__":
     api = CoinGecko()
     results = []
 
+    # Test rate limiting
     for tok in Tokens:
         price = api.current_price(tok.address)
         results.append(price)

@@ -1,15 +1,16 @@
-import numpy as np
 import argparse
 import json
 import os
 import pickle
+from pathlib import Path
 from typing import Tuple
+from utils import compute_liquidation_incentive
 
 import logger
+import numpy as np
 from coingecko import CoinGecko
 from constants import STABLECOINS
 from tokens import Tokens
-from utils import compute_liquidation_incentive
 
 log = logger.get_logger(__name__)
 TOL = 1e-4
@@ -49,9 +50,7 @@ def get_init_collateral_usd(tok: Tokens) -> float:
     elif tok == Tokens.LUSD:
         return 12_500_000
     else:
-        log.error(
-            f"Init collateral for {tok.symbol} doesnt match existing cases"
-        )
+        log.error(f"Init collateral for {tok.symbol} doesnt match existing cases")
         raise ValueError
 
 
@@ -194,7 +193,9 @@ def simulate_insolvency(
             insolvency = 0
             return insolvency
 
-    assert (net_debt_usd / net_collateral_usd) < ltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
+    assert (
+        net_debt_usd / net_collateral_usd
+    ) < ltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
     return 0
     insolvency = net_debt_usd if (net_debt_usd / net_collateral_usd) >= ltv else 0
     return insolvency
@@ -211,15 +212,22 @@ def main(args: argparse.Namespace):
     stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
     opt_ltvs = {}
 
-    # tokens = [Tokens.WETH, Tokens.WBTC, Tokens.WSTETH, Tokens.USDC, Tokens.LINK, Tokens.UNI]
-    tokens = [t for t in Tokens]
+    tokens = [
+        Tokens.WETH,
+        Tokens.WSTETH,
+    ]
+    # tokens = [t for t in Tokens]
 
     cg = CoinGecko()
     prices = {t: cg.current_price(t.address) for t in tokens}
     # Price impact swap sizes
-    impacts = json.load(open("../data/swap_sizes.json", "r"))
+    impacts = json.load(
+        open(Path(__file__).parent.parent / "data/swap_sizes.json", "r")
+    )
     # Historical drawdowns between the ratio two tokens
-    drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", "rb"))
+    drawdowns = pickle.load(
+        open(Path(__file__).parent.parent / "data/pairwise_drawdowns.pkl", "rb")
+    )
     # Repay amount is set to be the swap size that incurs 50bps price impact
     repay_amnts = {t: impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
 
@@ -242,7 +250,9 @@ def main(args: argparse.Namespace):
             prev_ltv = _lltvs[0] - 0.005
             for ltv in _lltvs:
                 liq_bonus = compute_liquidation_incentive(args.m, args.beta, ltv)
-                log.debug(f"M = {args.m:.2f}, beta = {args.beta:.2f}, LI = {liq_bonus:.3f}")
+                log.debug(
+                    f"M = {args.m:.2f}, beta = {args.beta:.2f}, LI = {liq_bonus:.3f}"
+                )
                 insolvency = simulate_insolvency(
                     initial_collateral_usd=init_cusd,
                     collateral_price=prices[tok1],
@@ -268,7 +278,11 @@ def main(args: argparse.Namespace):
 
     for k, _ltv in opt_ltvs.items():
         _li = compute_liquidation_incentive(args.m, args.beta, _ltv)
-        log.info("{},{},{:.3f},{:.3f},{:.3f},{:.3f}".format(*k, _ltv, args.m, args.beta, _li))
+        log.info(
+            "{:6s},{:6s},{:.3f},{:.3f},{:.3f},{:.3f}".format(
+                *k, _ltv, args.m, args.beta, _li
+            )
+        )
 
     if not args.save_path:
         return
@@ -296,11 +310,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--iters", type=int, default=1000, help="Number of iterations to run in the sim"
     )
-    parser.add_argument(
-        "--m", type=float, default=0.15
-    )
-    parser.add_argument(
-        "--beta", type=float, default=0.2
-    )
+    parser.add_argument("--m", type=float, default=0.15)
+    parser.add_argument("--beta", type=float, default=0.3)
     args = parser.parse_args()
     main(args)
