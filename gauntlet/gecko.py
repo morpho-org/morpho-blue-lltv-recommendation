@@ -27,7 +27,7 @@ class API(ABC):
         self._calls_in_period = 0  # number of api requests in the current period
 
     @abstractproperty
-    def requests_per_minute(self, request) -> float:
+    def requests_per_minute(self) -> float:
         raise NotImplementedError
 
     def calculate_wait_time(self) -> float:
@@ -153,10 +153,33 @@ class CoinGecko(API):
         """
         return os.environ.get("COINGECKO_API_KEY")
 
+class GeckoTerminal(API):
+    @property
+    def requests_per_minute(self):
+        return 30
+
+    def top_dex_tvl(self, address, chain="eth"):
+        url = f"https://api.geckoterminal.com/api/v2/networks/{chain}/tokens/{address}/pools"
+        self.make_request(url=url)
+        response = self.make_request(url=url)
+
+        if not response.ok:
+            response.raise_for_status()
+
+        data = response.json()['data']
+        tot_tvl = 0
+        for d in data:
+            attrs = d.get('attributes', {})
+            tot_tvl += float(attrs.get("reserve_in_usd"))
+
+        return tot_tvl
 
 if __name__ == "__main__":
     usdc = Tokens.USDC
     api = CoinGecko()
+    gt = GeckoTerminal()
+    print(gt.get_dex_tvl(usdc.address))
+    breakpoint()
     results = []
 
     # Test rate limiting
@@ -168,3 +191,4 @@ if __name__ == "__main__":
     info = api.token_info(usdc.address)
     market_chart = api.market_chart(usdc.address)
     ohlc = api.ohlc(usdc.coingecko_id)
+
