@@ -21,7 +21,8 @@ from tokens import Tokens
 log = logger.get_logger(__name__)
 
 
-SPRICES = {
+# Use this over the coingecko API when testing to avoid rate limiting.
+PRICES_CACHE = {
     "aave": 65.88,
     "1inch": 0.307756,
     "rpl": 27.35,
@@ -200,6 +201,7 @@ def simulate_insolvency(
             assert abs(net_collateral_usd - collateral_price * collateral_tokens) < TOL
             assert abs(net_debt_usd - debt_tokens * debt_price) < TOL
 
+        # 0 collateral remaining. Stop simulation
         if net_collateral_usd < TOL:
             insolvency = net_debt_usd
             log.info(
@@ -207,11 +209,12 @@ def simulate_insolvency(
             )
             return insolvency
 
+        # 0 debt remaining. Stop simulation
         if net_debt_usd < TOL:
             insolvency = 0
             return insolvency
 
     assert (
         net_debt_usd / net_collateral_usd
-    ) < lltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
+    ) < lltv, f"Simulation finished with ltv > lltv: {net_debt_usd/net_collateral_usd:.3f}"
     return 0
