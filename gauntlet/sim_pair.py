@@ -72,7 +72,7 @@ def main(args: argparse.Namespace):
             initial_collateral_usd=args.initial_collateral_usd or init_collateral_usd,
             collateral_price=prices.get(collateral_token) or args.collateral_price,
             debt_price=prices.get(debt_token) or args.debt_price,
-            ltv=ltv,
+            lltv=ltv,
             repay_amount_usd=args.repay_amount_usd or repay_amount_usd,
             liq_bonus=liq_bonus,
             max_drawdown=args.max_drawdown or max_drawdown,

@@ -57,13 +57,17 @@ def get_init_collateral_usd(collat_token: Tokens, borrow_token: Tokens) -> float
     These numbers are subject to change but at the moment they give us reasonable results.
     """
     if collat_token in BLUE_CHIPS and borrow_token in BLUE_CHIPS:
-        return max(200_000_000, IMPACTS[collat_token.symbol]["0.25"] * \
-                                current_price(collat_token.address))
+        return max(
+            200_000_000,
+            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
+        )
     elif (collat_token in BLUE_CHIPS and borrow_token in SMALL_CAPS) or (
         collat_token in SMALL_CAPS and borrow_token in BLUE_CHIPS
     ):
-        return max(50_000_000, IMPACTS[collat_token.symbol]["0.25"] * \
-                               current_price(collat_token.address))
+        return max(
+            50_000_000,
+            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
+        )
     elif collat_token in SMALL_CAPS or borrow_token in SMALL_CAPS:
         return max(
             20_000_000,
@@ -113,7 +117,7 @@ def simulate_insolvency(
     initial_collateral_usd: float,
     collateral_price: float,
     debt_price: float,
-    ltv: float,
+    lltv: float,
     repay_amount_usd: float,
     liq_bonus: float,
     max_drawdown: float,
@@ -138,7 +142,7 @@ def simulate_insolvency(
     - initial_collateral_usd: float, value of the whale collateral position
     - collateral_price: float, initial price of the collateral asset
     - debt_price: float, initial price of the debt asset
-    - ltv: float, loan to value parameter (technically this is the borrow power being used)
+    - lltv: float, liquidation loan to value parameter
     - repay_amount_usd: float, amount of USD being repaid at each timestep if the account
         is liquidateable
     - liq_bonus: float, liquidation bonus
@@ -149,11 +153,11 @@ def simulate_insolvency(
     # ltv * (1 + liq_bonus) represents the value at which insolvencies can start to happen.
     # If the maximum drawdown doesnt reach this point, we will not observe any insolvent debt
     # so skip the computation.
-    if ltv * (1 + liq_bonus) < (1 - max_drawdown):
+    if lltv * (1 + liq_bonus) < (1 - max_drawdown):
         return 0
 
     collateral_tokens = initial_collateral_usd / collateral_price
-    debt_tokens = (initial_collateral_usd * ltv) / debt_price
+    debt_tokens = (initial_collateral_usd * lltv) / debt_price
     min_collateral_price = collateral_price * (1 - max_drawdown)
     max_iters = int(np.ceil((initial_collateral_usd / repay_amount_usd) + 1))
 
@@ -177,10 +181,10 @@ def simulate_insolvency(
         if i % 100 == 0:
             log.debug(
                 f"{i=} | debt to collat: {net_debt_usd/net_collateral_usd:.3f}"
-                + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | {ltv=}"
+                + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | {lltv=}"
             )
 
-        if net_debt_usd / net_collateral_usd >= ltv:
+        if net_debt_usd / net_collateral_usd >= lltv:
             # Figure out the most collateral a liquidator can claim
             # then back out the necessary debt they must repay to claim that
             # amount of collateral.
@@ -209,5 +213,5 @@ def simulate_insolvency(
 
     assert (
         net_debt_usd / net_collateral_usd
-    ) < ltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
+    ) < lltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
     return 0
