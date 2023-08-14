@@ -28,10 +28,13 @@ def main(args: argparse.Namespace):
     """
     lltvs = np.arange(0.01, 1.0, 0.01)
     stable_lltvs = np.arange(0.9, 1, 0.01)
+    # TODO: support address and symbol lookups
     tokens = [SYMBOL_MAP[args.collateral], SYMBOL_MAP[args.borrow]]
     opt_lltv = None
     opt_li = None
 
+    # TODO: drawdowns and repay amounts need to be supplemented
+    # if the input tokens are not in the cached values.
     cg = CoinGecko()
     prices = {t: cg.current_price(t.address) for t in tokens}
     # Price impact swap sizes
@@ -59,9 +62,9 @@ def main(args: argparse.Namespace):
         else lltvs
     )
     log.info(
-        f"{collateral_token} / {debt_token} | repay amount: {repay_amount_usd:.2f}"
+        f"{collateral_token} / {debt_token} | repay amount: ${repay_amount_usd:.2f}"
         + f" | drawdown: {max_drawdown:.3f} | init collat usd: {init_collateral_usd}"
-        + f" | p1 = {prices[collateral_token]:.2f}, p2 = {prices[debt_token]:.2f}"
+        + f" | collateral price = ${prices[collateral_token]:.2f}, debt price = ${prices[debt_token]:.2f}"
     )
 
     for ltv in _lltvs:
