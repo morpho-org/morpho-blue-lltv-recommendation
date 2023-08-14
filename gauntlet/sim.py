@@ -9,27 +9,44 @@ from utils import compute_liquidation_incentive
 import logger
 import numpy as np
 from coingecko import CoinGecko
+from constants import BLUE_CHIPS
+from constants import IMPACTS
+from constants import LARGE_CAPS
+from constants import SMALL_CAPS
 from constants import STABLECOINS
+from constants import TOL
 from tokens import Tokens
 
 log = logger.get_logger(__name__)
-TOL = 1e-4
 
-# TODO: This set of assets can be basically be parameterized by price impact
-# Ex: "Set of tokens that require incur less than 10% price impact on a $10mill swap"
-# Potentially add more logic to exclude stablecoins
-T1 = {
-    Tokens.WETH,
-    Tokens.WBTC,
-    Tokens.WSTETH,
-    Tokens.RETH,
-    Tokens.CBETH,
+
+SPRICES = {
+    "aave": 65.88,
+    "1inch": 0.307756,
+    "rpl": 27.35,
+    "link": 7.47,
+    "wbtc": 29450,
+    "reth": 2005.78,
+    "weth": 1847.87,
+    "cbeth": 1932.11,
+    "wsteth": 2095.09,
+    "snx": 2.54,
+    "bal": 4.2,
+    "ens": 8.95,
+    "uni": 6.18,
+    "mkr": 1248.92,
+    "ldo": 1.85,
+    "crv": 0.595425,
+    "usdc": 1.001,
+    "usdt": 0.99958,
+    "dai": 1.0,
+    "lusd": 0.994649,
+    "frax": 0.999439,
 }
-T2 = {t for t in Tokens if (t not in STABLECOINS) and (t not in T1)}
+IMPACTS = json.load(open(Path(__file__).parent.parent / "data/swap_sizes.json", "r"))
 
 
-# TODO: Abstract
-def get_init_collateral_usd(tok: Tokens) -> float:
+def get_init_collateral_usd(collat_token: Tokens, borrow_token: Tokens) -> float:
     """
     The sim initializes one collateral position that maxes out its
     borrow power. The size of this collateral position is effectively
@@ -38,23 +55,29 @@ def get_init_collateral_usd(tok: Tokens) -> float:
 
     These numbers are subject to change but at the moment they give us reasonable results.
     """
-    if tok in T1:
-        return 200_000_000
-    elif tok in T2:
-        return 20_000_000
-    # TODO: stablecoins can use 25% price impact instead probably
-    elif tok in {Tokens.USDC, Tokens.DAI, Tokens.USDT}:
-        return 300_000_000
-    elif tok == Tokens.FRAX:
-        return 250_000_000
-    elif tok == Tokens.LUSD:
-        return 12_500_000
+    if collat_token in BLUE_CHIPS and borrow_token in BLUE_CHIPS:
+        return max(200_000_000, IMPACTS[collat_token.symbol]["0.25"])
+    elif (collat_token in BLUE_CHIPS and borrow_token in SMALL_CAPS) or (
+        collat_token in SMALL_CAPS and borrow_token in BLUE_CHIPS
+    ):
+        return max(50_000_000, IMPACTS[collat_token.symbol]["0.25"])
+    elif collat_token in SMALL_CAPS or borrow_token in SMALL_CAPS:
+        return max(
+            20_000_000,
+            IMPACTS[collat_token.symbol]["0.25"],
+            IMPACTS[borrow_token.symbol]["0.25"],
+        )
+    elif collat_token in STABLECOINS:  # collat stable
+        return IMPACTS[collat_token.symbol]["0.25"]
+    elif borrow_token in STABLECOINS:
+        return IMPACTS[collat_token.symbol]["0.25"]
     else:
-        log.error(f"Init collateral for {tok.symbol} doesnt match existing cases")
-        raise ValueError
+        raise ValueError(
+            f"init collateral for {collat_token.symbol} doesnt match existing"
+            + " scenarios. please pick an initial collateral position."
+        )
 
 
-# TODO: Abstract
 def heuristic_drawdown(
     t1: Tokens, t2: Tokens, drawdowns: dict[Tuple[str, str], float]
 ) -> float:
@@ -64,22 +87,17 @@ def heuristic_drawdown(
     drawdowns: dict, dict of the collateral/borrow Tokens pair mapped to
         the time horizon max drawdowns of their price ratio.
     """
-    try:
-        # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
-        # 30 day 99th percentile drawdown in ratio change of t1/t2
-        hist_dd = drawdowns[(t1.symbol, t2.symbol)][30][99]
-    except:
-        # default hist dd
-        hist_dd = 0.25
+    # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
+    # 30 day 99th percentile drawdown in ratio change of t1/t2
+    hist_dd = drawdowns[(t1.symbol, t2.symbol)][30][99]
 
     # Handle super low drawdown cases for LSTs, stablecoin depeg
-    # TODO: better parameterize these heuristic consts
     if hist_dd < 0.1:
         return max(hist_dd, 0.02)
 
-    if t1 in T1 and t2 in T1:
+    if t1 in LARGE_CAPS and t2 in LARGE_CAPS:
         dd = 0.25
-    elif t1 in T2 and t2 in T2:
+    elif t1 in SMALL_CAPS and t2 in SMALL_CAPS:
         dd = 0.5
     else:
         dd = 0.35
@@ -96,8 +114,7 @@ def simulate_insolvency(
     repay_amount_usd: float,
     liq_bonus: float,
     max_drawdown: float,
-    decr_scale: float,
-    iters: int,
+    pct_decrease: float,
 ) -> float:
     """
     To simulate the potential insolvencies, we do the following
@@ -123,8 +140,8 @@ def simulate_insolvency(
         is liquidateable
     - liq_bonus: float, liquidation bonus
     - max_drawdown: float, largest collateral value decrease allowed during the simulation
-    - decr_scale: float, proportion to scale the collateral value by at each timestep
-        decr_scale \in [0, 1] so the collateral value always decreases.
+    - pct_decrease: float, proportion to scale the collateral value by at each timestep
+        pct_decrease \in [0, 1] so the collateral value always decreases.
     """
     # ltv * (1 + liq_bonus) represents the value at which insolvencies can start to happen.
     # If the maximum drawdown doesnt reach this point, we will not observe any insolvent debt
@@ -133,19 +150,9 @@ def simulate_insolvency(
         return 0
 
     collateral_tokens = initial_collateral_usd / collateral_price
-    collateral_price = collateral_price
-    net_collateral_usd = collateral_tokens * collateral_price
-
-    debt_price = debt_price
-    debt_usd = initial_collateral_usd * ltv
-    debt_tokens = debt_usd / debt_price
-    net_debt_usd = debt_tokens * debt_price
+    debt_tokens = (initial_collateral_usd * ltv) / debt_price
     min_collateral_price = collateral_price * (1 - max_drawdown)
-    insolvency = 0
     max_iters = int(np.ceil((initial_collateral_usd / repay_amount_usd) + 1))
-    log.debug(f"Running for {max_iters} iters")
-    assert abs(initial_collateral_usd - net_collateral_usd) < TOL
-    assert abs(debt_usd - net_debt_usd) < TOL
 
     for i in range(max_iters):
         """
@@ -158,16 +165,19 @@ def simulate_insolvency(
         ltv to determine liquidation eligibility, so this is fine.
         """
         # TODO: Abstract state update
-        collateral_price = max(min_collateral_price, collateral_price * decr_scale)
+        collateral_price = max(
+            min_collateral_price, collateral_price * (1 - pct_decrease)
+        )
         net_collateral_usd = collateral_tokens * collateral_price
-        debt_to_collat = net_debt_usd / net_collateral_usd
+        net_debt_usd = debt_price * debt_tokens
 
         if i % 100 == 0:
             log.debug(
-                f"{i=} | {debt_to_collat=:.3f} | {net_collateral_usd=} | {net_debt_usd=} | {ltv=}"
+                f"{i=} | debt to collat: {net_debt_usd/net_collateral_usd:.3f}"
+                + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | {ltv=}"
             )
 
-        if debt_to_collat >= ltv:
+        if net_debt_usd / net_collateral_usd >= ltv:
             # Figure out the most collateral a liquidator can claim
             # then back out the necessary debt they must repay to claim that
             # amount of collateral.
@@ -175,18 +185,19 @@ def simulate_insolvency(
                 min(net_debt_usd, repay_amount_usd) * (1 + liq_bonus),
                 net_collateral_usd,
             )
-            collateral_tokens_claimed = collateral_claimed_usd / collateral_price
-            collateral_tokens -= collateral_tokens_claimed
-            assert (
-                (net_collateral_usd - collateral_claimed_usd)
-                - (collateral_tokens * collateral_price)
-            ) < TOL
+            collateral_tokens -= collateral_claimed_usd / collateral_price
+            debt_tokens -= collateral_claimed_usd / (debt_price * (1 + liq_bonus))
 
             net_collateral_usd -= collateral_claimed_usd
             net_debt_usd -= collateral_claimed_usd / (1 + liq_bonus)
+            assert abs(net_collateral_usd - collateral_price * collateral_tokens) < TOL
+            assert abs(net_debt_usd - debt_tokens * debt_price) < TOL
 
         if net_collateral_usd < TOL:
             insolvency = net_debt_usd
+            log.info(
+                f"Initial collateral: {initial_collateral_usd/1e6:.2f}mil | Repay usd: {repay_amount_usd:.2f} | Max drawdown: {max_drawdown:.2f}"
+            )
             return insolvency
 
         if net_debt_usd < TOL:
@@ -197,116 +208,3 @@ def simulate_insolvency(
         net_debt_usd / net_collateral_usd
     ) < ltv, "Simulation finished with d2c > ltv: {net_debt_usd/net_collateral_usd:.3f}, {ltv=}"
     return 0
-    insolvency = net_debt_usd if (net_debt_usd / net_collateral_usd) >= ltv else 0
-    return insolvency
-
-
-def main(args: argparse.Namespace):
-    """
-    This main function will compute the optimal LTVs (highest LTV) with 0
-    insolvencies for all token pair markets.
-    The resulting dict of LTV results (pair of tokens -> LTV value) will
-    be saved in the save path specified by the input args.
-    """
-    lltvs = [0.01 * x for x in range(40, 100)]
-    stable_lltvs = [0.005 * x for x in range(90 * 2, int(99.5 * 2))]
-    opt_ltvs = {}
-
-    tokens = [t for t in Tokens]
-
-    cg = CoinGecko()
-    prices = {t: cg.current_price(t.address) for t in tokens}
-    # Price impact swap sizes
-    impacts = json.load(
-        open(Path(__file__).parent.parent / "data/swap_sizes.json", "r")
-    )
-    # Historical drawdowns between the ratio two tokens
-    drawdowns = pickle.load(
-        open(Path(__file__).parent.parent / "data/pairwise_drawdowns.pkl", "rb")
-    )
-    # Repay amount is set to be the swap size that incurs 50bps price impact
-    repay_amnts = {t: impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
-
-    for tok1 in tokens:
-        for tok2 in tokens:
-            if tok1 == tok2:
-                continue
-
-            _lltvs = (
-                stable_lltvs if (tok1 in STABLECOINS and tok2 in STABLECOINS) else lltvs
-            )
-            repay_amount_usd = min(repay_amnts[tok1], repay_amnts[tok2])
-            max_dd = heuristic_drawdown(tok1, tok2, drawdowns)
-            init_cusd = get_init_collateral_usd(tok1)
-            log.debug(
-                f"{tok1} / {tok2} | repay amount: {repay_amount_usd:.2f}"
-                + f" | drawdown: {max_dd:.3f} | init collat usd: {init_cusd}"
-                + f" | p1 = {prices[tok1]:.2f}, p2 = {prices[tok2]:.2f}"
-            )
-            prev_ltv = _lltvs[0] - 0.005
-            for ltv in _lltvs:
-                liq_bonus = compute_liquidation_incentive(args.m, args.beta, ltv)
-                log.debug(
-                    f"M = {args.m:.2f}, beta = {args.beta:.2f}, LI = {liq_bonus:.3f}"
-                )
-                insolvency = simulate_insolvency(
-                    initial_collateral_usd=init_cusd,
-                    collateral_price=prices[tok1],
-                    debt_price=prices[tok2],
-                    ltv=ltv,
-                    repay_amount_usd=repay_amount_usd,
-                    liq_bonus=liq_bonus,
-                    max_drawdown=max_dd,
-                    decr_scale=args.decr_scale,
-                    iters=args.iters,
-                )
-
-                # Note: we do not actually care about the size of the insolvency.
-                # For the purpose of the risk assessment, we are most interested in the lowest
-                # LTV that does not realize insolvencies.
-                if insolvency > TOL:
-                    opt_ltvs[(tok1.symbol, tok2.symbol)] = prev_ltv
-                    break
-                prev_ltv = ltv
-
-            if (tok1.symbol, tok2.symbol) not in opt_ltvs:
-                opt_ltvs[(tok1.symbol, tok2.symbol)] = max(_lltvs)
-
-    for k, _ltv in opt_ltvs.items():
-        _li = compute_liquidation_incentive(args.m, args.beta, _ltv)
-        log.info(
-            "{:6s},{:6s},{:.3f},{:.3f},{:.3f},{:.3f}".format(
-                *k, _ltv, args.m, args.beta, _li
-            )
-        )
-
-    if not args.save_path:
-        return
-
-    # Ensure the save directory exists
-    directory = os.path.dirname(args.save_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    with open(args.save_path, "wb") as f:
-        pickle.dump(opt_ltvs, f)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--decr_scale",
-        type=float,
-        default=0.995,
-        help="Per iter scaling factor of the collateral to debt price ratio",
-    )
-    parser.add_argument(
-        "--save_path", type=str, default="", help="Path to save results"
-    )
-    parser.add_argument(
-        "--iters", type=int, default=1000, help="Number of iterations to run in the sim"
-    )
-    parser.add_argument("--m", type=float, default=0.15)
-    parser.add_argument("--beta", type=float, default=0.3)
-    args = parser.parse_args()
-    main(args)
