@@ -8,8 +8,8 @@ The risk tool conducts a simulation to evaluate the amount of bad debt within a 
 
 The simulation begins with the assumption of one borrower holding a concentrated position.
 This initial collateral position size is determined based on various factors about the asset. In the current state of the tool, we set this position size slightly differently based on the specific lending market under consideration:
-- for larger market cap token markets: the larger of $200 million, the size of a 25% price impact sell order"
-- for smaller market cap token markets: the larger of $50 million, the size of a 25% price impact sell order"
+- for larger market cap token markets: the larger of $200 million, the size of a 25% price impact sell order
+- for smaller market cap token markets: the larger of $50 million, the size of a 25% price impact sell order
 
 We assume that the borrower takes out as much loan as the input LLTV allows (ex: if the LLTV under consideration is 0.80, then the simulation sets the borrow amount to be 80% of the initial collateral).
 
