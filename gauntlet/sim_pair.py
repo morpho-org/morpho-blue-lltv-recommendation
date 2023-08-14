@@ -8,7 +8,7 @@ from utils import current_price
 import logger
 import numpy as np
 from coingecko import CoinGecko
-
+from constants import ADDRESS_MAP
 from constants import STABLECOINS
 from constants import SYMBOL_MAP
 from sim import get_init_collateral_usd
@@ -101,8 +101,12 @@ def main(args: argparse.Namespace):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--borrow", type=str)  # borrow
-    parser.add_argument("-c", "--collateral", type=str)  # collateral
+    parser.add_argument(
+        "-b", "--borrow", type=str, help="symbol or address of the borrowable asset"
+    )
+    parser.add_argument(
+        "-c", "--collateral", type=str, help="symbol or address of the collateral asset"
+    )
     parser.add_argument(
         "--pct_decrease",
         type=float,
@@ -113,15 +117,43 @@ if __name__ == "__main__":
         "--initial_collateral_usd",
         type=int,
         default=None,
+        help="Size of collateral position to liquidate in the simulation",
     )
-    parser.add_argument("--collateral_price", type=float, default=None)
-    parser.add_argument("--debt_price", type=float, default=None)
-    parser.add_argument("--repay_amount_usd", type=float, default=None)
-    parser.add_argument("--max_drawdown", type=float, default=None)
-    parser.add_argument("--m", type=float, default=0.15)
-    parser.add_argument("--beta", type=float, default=0.4)
     parser.add_argument(
-        "--min_liq_bonus", type=float, default=0.01, help="Liquidation bonus minimum"
+        "--collateral_price",
+        type=float,
+        default=None,
+        help="[Optional] Price of collateral asset. If this is not provided, the simulation uses the current price",
+    )
+    parser.add_argument(
+        "--debt_price",
+        type=float,
+        default=None,
+        help="[Optional] Price of the borrowable asset. If this is not provided, the simulation uses the current price.",
+    )
+    parser.add_argument(
+        "--repay_amount_usd",
+        type=float,
+        default=None,
+        help="[Optional] Amount of debt that is repaid during the simulation",
+    )
+    parser.add_argument(
+        "--max_drawdown",
+        type=float,
+        default=None,
+        help="[Optional] The maximum proportion the collateral price to debt price can drop during the simulation",
+    )
+    parser.add_argument(
+        "--m",
+        type=float,
+        default=0.15,
+        help="Liquidation incentive parameter that determines the largest liquidation incentive allowed",
+    )
+    parser.add_argument(
+        "--beta", type=float, default=0.4, help="Liquidation incentive parameter"
+    )
+    parser.add_argument(
+        "--min_liq_bonus", type=float, default=0.01, help="Minimum liquidation bonus"
     )
     args = parser.parse_args()
     main(args)

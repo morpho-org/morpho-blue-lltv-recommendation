@@ -5,6 +5,7 @@ import pickle
 from pathlib import Path
 from typing import Tuple
 from utils import compute_liquidation_incentive
+from utils import current_price
 
 import logger
 import numpy as np
@@ -56,16 +57,18 @@ def get_init_collateral_usd(collat_token: Tokens, borrow_token: Tokens) -> float
     These numbers are subject to change but at the moment they give us reasonable results.
     """
     if collat_token in BLUE_CHIPS and borrow_token in BLUE_CHIPS:
-        return max(200_000_000, IMPACTS[collat_token.symbol]["0.25"])
+        return max(200_000_000, IMPACTS[collat_token.symbol]["0.25"] * \
+                                current_price(collat_token.address))
     elif (collat_token in BLUE_CHIPS and borrow_token in SMALL_CAPS) or (
         collat_token in SMALL_CAPS and borrow_token in BLUE_CHIPS
     ):
-        return max(50_000_000, IMPACTS[collat_token.symbol]["0.25"])
+        return max(50_000_000, IMPACTS[collat_token.symbol]["0.25"] * \
+                               current_price(collat_token.address))
     elif collat_token in SMALL_CAPS or borrow_token in SMALL_CAPS:
         return max(
             20_000_000,
-            IMPACTS[collat_token.symbol]["0.25"],
-            IMPACTS[borrow_token.symbol]["0.25"],
+            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
+            IMPACTS[borrow_token.symbol]["0.25"] * current_price(borrow_token.address),
         )
     elif collat_token in STABLECOINS:  # collat stable
         return IMPACTS[collat_token.symbol]["0.25"]
@@ -90,7 +93,7 @@ def heuristic_drawdown(
     # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
     # 30 day 99th percentile drawdown in ratio change of t1/t2
     hist_dd = drawdowns[(t1.symbol, t2.symbol)][30][99]
-
+    log.debug(f"Historical drawdown: {hist_dd:.3f}")
     # Handle super low drawdown cases for LSTs, stablecoin depeg
     if hist_dd < 0.1:
         return max(hist_dd, 0.02)
