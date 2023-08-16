@@ -3,6 +3,7 @@ import os
 import time
 from abc import ABC
 from abc import abstractproperty
+from functools import lru_cache
 from dataclasses import dataclass
 from typing import Optional
 
@@ -61,6 +62,7 @@ class API(ABC):
             request_kwargs["headers"] = header
 
         response = requests.get(**request_kwargs)
+        log.debug(f"Sent get request with args: {request_kwargs}")
         if not response.ok:
             response.raise_for_status()
 
@@ -178,7 +180,7 @@ if __name__ == "__main__":
     usdc = Tokens.USDC
     api = CoinGecko()
     gt = GeckoTerminal()
-    print(gt.get_dex_tvl(usdc.address))
+    print(gt.top_dex_tvl(usdc.address))
     breakpoint()
     results = []
 

@@ -1,5 +1,7 @@
 from enum import Enum
+from typing import Any
 from typing import NamedTuple
+from typing import Union
 
 
 class TokenData(NamedTuple):
@@ -49,3 +51,20 @@ class Tokens(Enum):
     def coingecko_id(self):
         return self.value.coingecko_id
 
+    # This ensures that Tokens and TokenData consisting of the same info
+    # are treated the same.
+    def __eq__(self, other: Any):
+        if isinstance(other, TokenData):
+            return self.value == other
+        elif isinstance(other, Tokens):
+            return super().__eq__(other)
+        else:
+            return False
+
+    # Tokens and TokenData with the same underlying info get
+    # hashed the same. This allows us to have sets/dicts of
+    # Tokens or TokenData as keys interchangeably.
+    def __hash__(self):
+        return hash(self.value)
+
+TokenInfo = Union[Tokens, TokenData]

@@ -45,7 +45,6 @@ PRICES_CACHE = {
     "lusd": 0.994649,
     "frax": 0.999439,
 }
-IMPACTS = json.load(open(Path(__file__).parent.parent / "data/swap_sizes.json", "r"))
 
 
 def get_init_collateral_usd(collat_token: Tokens, borrow_token: Tokens) -> float:
@@ -216,5 +215,7 @@ def simulate_insolvency(
 
     assert (
         net_debt_usd / net_collateral_usd
-    ) < lltv, f"Simulation finished with ltv > lltv: {net_debt_usd/net_collateral_usd:.3f}"
+    ) < lltv, (
+        f"Simulation finished with ltv > lltv: {net_debt_usd/net_collateral_usd:.3f}"
+    )
     return 0

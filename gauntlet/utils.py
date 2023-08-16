@@ -30,11 +30,10 @@ def ms_to_dt(ms):
 
 
 @lru_cache
-def current_price(addr):
+def current_price(addr: str):
     return CG.current_price(addr)
 
 
-# TODO: Unify interface for cow/kyber
 def price_impact_size_cowswap(
     token_in: str,
     token_in_decimals: int,
@@ -42,7 +41,7 @@ def price_impact_size_cowswap(
     token_out_decimals: int,
     target_price_impact: float,
     rtol=5e-2,
-    max_sz_usd=500_000_000,
+    max_sz_usd=1_000_000_000,
 ):
     def cowswap_oracle(token_in: str, token_out: str, size: float):
         """
@@ -70,7 +69,7 @@ def price_impact_size_cowswap(
     spot_in = cg.current_price(token_in)
     spot_out = cg.current_price(token_out)
     min_sz = 0
-    max_sz = max_sz_usd / spot_in  # hundred mill as a loose upper bound seems okay?
+    max_sz = max_sz_usd / spot_in
     iters = 0
     price_impact = 1
 
@@ -92,8 +91,7 @@ def price_impact_size_cowswap(
 
 if __name__ == "__main__":
     pis = {}
-    # for tok in [Tokens.UNI, Tokens.WETH, Tokens.WSTETH, Tokens.CBETH, Tokens.RETH]:
-    for tok in Tokens:
+    for tok in [Tokens.WETH, Tokens.USDC, Tokens.CRV]:
         pis[tok.symbol] = {}
         tok_out = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 

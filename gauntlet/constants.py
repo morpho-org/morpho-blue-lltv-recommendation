@@ -22,4 +22,7 @@ STABLECOINS = [
 LARGE_CAPS = {Tokens.WETH, Tokens.WSTETH, Tokens.RETH, Tokens.WBTC}
 BLUE_CHIPS = LARGE_CAPS.union(set(STABLECOINS))
 SMALL_CAPS = {t for t in Tokens if t not in STABLECOINS and t not in LARGE_CAPS}
+PRICE_IMPACT_JSON_PATH = Path(__file__).parent.parent / "data/swap_sizes.json"
 IMPACTS = json.load(open(Path(__file__).parent.parent / "data/swap_sizes.json", "r"))
+DRAWDOWN_PKL_PATH = Path(__file__).parent.parent / "data/pairwise_drawdowns.pkl"
+

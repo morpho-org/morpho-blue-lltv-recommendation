@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import json
 import pickle
@@ -14,10 +16,31 @@ from constants import SYMBOL_MAP
 from sim import get_init_collateral_usd
 from sim import heuristic_drawdown
 from sim import simulate_insolvency
+from data_utils import get_drawdowns, get_price_impacts
+from tokens import TokenData
 from tokens import Tokens
 
 log = logger.get_logger(__name__)
 
+CG = CoinGecko()
+
+def token_from_symbol_or_address(input_str: str) -> Tokens | TokenData:
+    if '0x' in input_str and len(input_str) == 42:
+        if input_str in ADDRESS_MAP:
+            return ADDRESS_MAP[input_str]
+        try:
+            token_info = CG.token_info(input_str)
+            symbol = token_info['symbol']
+            decimals = token_info['detail_platforms']['ethereum']['decimal_place']
+            name = token_info['name']
+            return TokenData(symbol=symbol, decimals=decimals, address=input_str, coingecko_id=name)
+        except:
+            raise ValueError("Invalid token!")
+    else:
+        if input_str not in SYMBOL_MAP:
+            raise ValueError("Unsupported token symbol. " + \
+                             "Please manually add the token to `tokens.py` before rerunning the script")
+        return SYMBOL_MAP[input_str]
 
 def main(args: argparse.Namespace):
     """
@@ -28,24 +51,28 @@ def main(args: argparse.Namespace):
     """
     lltvs = np.arange(0.01, 1.0, 0.01)
     stable_lltvs = np.arange(0.9, 1, 0.01)
+
     # TODO: support address and symbol lookups
-    tokens = [SYMBOL_MAP[args.collateral], SYMBOL_MAP[args.borrow]]
+    collateral_token = token_from_symbol_or_address(args.collateral)
+    debt_token = token_from_symbol_or_address(args.borrow)
+    tokens = [collateral_token, debt_token]
     opt_lltv = None
     opt_li = None
 
     # TODO: drawdowns and repay amounts need to be supplemented
     # if the input tokens are not in the cached values.
-    cg = CoinGecko()
-    prices = {t: cg.current_price(t.address) for t in tokens}
-    # Price impact swap sizes
-    impacts = json.load(open("../data/swap_sizes.json", "r"))
-    # Historical drawdowns between the ratio two tokens
-    drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", "rb"))
-    # Repay amount is set to be the swap size that incurs 50bps price impact
-    repay_amnts = {t: impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
 
-    collateral_token = SYMBOL_MAP.get(args.collateral)
-    debt_token = SYMBOL_MAP.get(args.borrow)
+    # default behavior is always to update if we have fetched (why wouldnt we)
+    # use_cache to explicitly avoid runtime fetching (most useful when testing to avoid lag)
+    prices = {t: current_price(t.address) for t in tokens}
+    price_impacts = get_price_impacts(tokens, impacts=[0.005], update_cache=args.update_cache, use_cache=args.use_cache)
+    drawdowns = get_drawdowns(tokens, update_cache=args.update_cache, use_cache=args.use_cache)
+    repay_amnts = {t: price_impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
+
+    # impacts = json.load(open("../data/swap_sizes.json", "r"))
+    # drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", "rb"))
+    # Repay amount is set to be the swap size that incurs 50bps price impact
+
     if (collateral_token in Tokens) and (debt_token in Tokens):
         repay_amount_usd = min(repay_amnts[collateral_token], repay_amnts[debt_token])
         max_drawdown = heuristic_drawdown(collateral_token, debt_token, drawdowns)
@@ -61,7 +88,7 @@ def main(args: argparse.Namespace):
         if (collateral_token in STABLECOINS and debt_token in STABLECOINS)
         else lltvs
     )
-    log.info(
+    log.debug(
         f"{collateral_token} / {debt_token} | repay amount: ${repay_amount_usd:.2f}"
         + f" | drawdown: {max_drawdown:.3f} | init collat usd: {init_collateral_usd}"
         + f" | collateral price = ${prices[collateral_token]:.2f}, debt price = ${prices[debt_token]:.2f}"
@@ -153,10 +180,18 @@ if __name__ == "__main__":
         help="Liquidation incentive parameter that determines the largest liquidation incentive allowed",
     )
     parser.add_argument(
-        "--beta", type=float, default=0.4, help="Liquidation incentive parameter"
+        "--beta", type=float, default=0.3, help="Liquidation incentive parameter"
     )
     parser.add_argument(
         "--min_liq_bonus", type=float, default=0.01, help="Minimum liquidation bonus"
+    )
+    parser.add_argument(
+        "--update_cache", action="store_true", default=False,
+        help="Update the drawdown and price impact caches with newly computed values."
+    )
+    parser.add_argument(
+        "--use_cache", action="store_true", default=False,
+        help="If true/set, use precomputed price impact, and historical drawdown numbers"
     )
     args = parser.parse_args()
     main(args)
