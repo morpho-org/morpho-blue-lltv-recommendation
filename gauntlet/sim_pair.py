@@ -65,23 +65,17 @@ def main(args: argparse.Namespace):
     # default behavior is always to update if we have fetched (why wouldnt we)
     # use_cache to explicitly avoid runtime fetching (most useful when testing to avoid lag)
     prices = {t: current_price(t.address) for t in tokens}
-    price_impacts = get_price_impacts(tokens, impacts=[0.005], update_cache=args.update_cache, use_cache=args.use_cache)
+    price_impacts = get_price_impacts(tokens, update_cache=args.update_cache, use_cache=args.use_cache)
     drawdowns = get_drawdowns(tokens, update_cache=args.update_cache, use_cache=args.use_cache)
     repay_amnts = {t: price_impacts[t.symbol]["0.005"] * prices[t] for t in tokens}
 
-    # impacts = json.load(open("../data/swap_sizes.json", "r"))
-    # drawdowns = pickle.load(open("../data/pairwise_drawdowns.pkl", "rb"))
-    # Repay amount is set to be the swap size that incurs 50bps price impact
-
-    if (collateral_token in Tokens) and (debt_token in Tokens):
+    try:
         repay_amount_usd = min(repay_amnts[collateral_token], repay_amnts[debt_token])
         max_drawdown = heuristic_drawdown(collateral_token, debt_token, drawdowns)
-        init_collateral_usd = get_init_collateral_usd(collateral_token, debt_token)
-    else:
-        log.debug(
-            "Input tokens were not given or are not part of"
-            + " the token universe in constants.py."
-            + " Using command line parameterization instead."
+        init_collateral_usd = get_init_collateral_usd(collateral_token, debt_token, price_impacts)
+    except Exception as e:
+        raise ValueError(
+            f"There was a problem with your input tokens: {e}"
         )
     _lltvs = (
         stable_lltvs  # stablecoins do not need to search the entire range
@@ -92,6 +86,7 @@ def main(args: argparse.Namespace):
         f"{collateral_token} / {debt_token} | repay amount: ${repay_amount_usd:.2f}"
         + f" | drawdown: {max_drawdown:.3f} | init collat usd: {init_collateral_usd}"
         + f" | collateral price = ${prices[collateral_token]:.2f}, debt price = ${prices[debt_token]:.2f}"
+        + f" | emp drawdown: {drawdowns[(collateral_token.symbol, debt_token.symbol)]}"
     )
 
     for ltv in _lltvs:

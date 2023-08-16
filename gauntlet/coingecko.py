@@ -62,7 +62,7 @@ class API(ABC):
             request_kwargs["headers"] = header
 
         response = requests.get(**request_kwargs)
-        log.debug(f"Sent get request with args: {request_kwargs}")
+        log.debug(f"Sent get request to url: {request_kwargs['url']}")
         if not response.ok:
             response.raise_for_status()
 

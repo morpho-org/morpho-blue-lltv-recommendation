@@ -122,6 +122,11 @@ def get_drawdowns(
         )
 
         if update_cache:
+            with open(DRAWDOWN_PKL_PATH, "rb") as f:
+                orig_dds = pickle.load(f)
+
+            orig_dds.update(dd_dict)
+
             # Write the updated data directly back to the file
             with open(DRAWDOWN_PKL_PATH, "wb") as f:
                 pickle.dump(dd_dict, f)
@@ -154,8 +159,12 @@ def get_price_impacts(
 
         if update_cache:
             # Write the updated data directly back to the file
+            with open(PRICE_IMPACT_JSON_PATH, "r") as json_file:
+                orig_impacts = json.load(json_file)
+
+            orig_impacts.update(impact_sizes)
             with open(PRICE_IMPACT_JSON_PATH, "w") as json_file:
-                json.dump(impact_sizes, json_file, indent=4)
+                json.dump(orig_impacts, json_file, indent=4)
 
     return impact_sizes
 

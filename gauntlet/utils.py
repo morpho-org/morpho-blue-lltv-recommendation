@@ -102,7 +102,7 @@ if __name__ == "__main__":
                 tok_out.address,
                 tok_out.decimals,
                 p,
-                max_sz_usd=1_000_000_000,
+                max_sz_usd=2_000_000_000,
             )
             log.info(f"{tok} | impact size: {p:.3f} | swap size: {pis[tok.symbol][p]}")
 

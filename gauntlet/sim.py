@@ -11,7 +11,6 @@ import logger
 import numpy as np
 from coingecko import CoinGecko
 from constants import BLUE_CHIPS
-from constants import IMPACTS
 from constants import LARGE_CAPS
 from constants import SMALL_CAPS
 from constants import STABLECOINS
@@ -47,42 +46,49 @@ PRICES_CACHE = {
 }
 
 
-def get_init_collateral_usd(collat_token: Tokens, borrow_token: Tokens) -> float:
+def get_init_collateral_usd(
+    collat_token: Tokens,
+    borrow_token: Tokens,
+    price_impacts: dict[str, dict[str, float]],
+) -> float:
     """
     The sim initializes one collateral position that maxes out its
     borrow power. The size of this collateral position is effectively
-    a function of 25% price impact with clamping to a reasonable closest
-    10mil/100mil figure..
-
-    These numbers are subject to change but at the moment they give us reasonable results.
+    a function of 25% price impact with some clamping to ensure
+    reasonable sizes.
     """
     if collat_token in BLUE_CHIPS and borrow_token in BLUE_CHIPS:
         return max(
             200_000_000,
-            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
+            price_impacts[collat_token.symbol]["0.25"]
+            * current_price(collat_token.address),
         )
     elif (collat_token in BLUE_CHIPS and borrow_token in SMALL_CAPS) or (
         collat_token in SMALL_CAPS and borrow_token in BLUE_CHIPS
     ):
         return max(
             50_000_000,
-            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
+            price_impacts[collat_token.symbol]["0.25"]
+            * current_price(collat_token.address),
         )
     elif collat_token in SMALL_CAPS or borrow_token in SMALL_CAPS:
         return max(
             20_000_000,
-            IMPACTS[collat_token.symbol]["0.25"] * current_price(collat_token.address),
-            IMPACTS[borrow_token.symbol]["0.25"] * current_price(borrow_token.address),
+            price_impacts[collat_token.symbol]["0.25"]
+            * current_price(collat_token.address),
+            price_impacts[borrow_token.symbol]["0.25"]
+            * current_price(borrow_token.address),
         )
     elif collat_token in STABLECOINS:  # collat stable
-        return IMPACTS[collat_token.symbol]["0.25"]
+        return price_impacts[collat_token.symbol]["0.25"]
     elif borrow_token in STABLECOINS:
-        return IMPACTS[collat_token.symbol]["0.25"]
+        return price_impacts[borrow_token.symbol]["0.25"]
     else:
-        raise ValueError(
-            f"init collateral for {collat_token.symbol} doesnt match existing"
-            + " scenarios. please pick an initial collateral position."
-        )
+        return 20_000_000
+        # raise ValueError(
+        #     f"init collateral for {collat_token.symbol} doesnt match existing"
+        #     + " scenarios. Please pick an initial collateral position."
+        # )
 
 
 def heuristic_drawdown(
