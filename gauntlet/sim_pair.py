@@ -35,7 +35,7 @@ def token_from_symbol_or_address(input_str: str) -> Tokens | TokenData:
             name = token_info['name']
             return TokenData(symbol=symbol, decimals=decimals, address=input_str, coingecko_id=name)
         except:
-            raise ValueError("Invalid token!")
+            raise ValueError("Please provide a valid token.")
     else:
         if input_str not in SYMBOL_MAP:
             raise ValueError("Unsupported token symbol. " + \
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         help="Update the drawdown and price impact caches with newly computed values."
     )
     parser.add_argument(
-        "--use_cache", action="store_true", default=False,
+        "--use_cache", action="store_true", default=True,
         help="If true/set, use precomputed price impact, and historical drawdown numbers"
     )
     args = parser.parse_args()
