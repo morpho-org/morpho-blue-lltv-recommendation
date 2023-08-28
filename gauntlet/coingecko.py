@@ -3,16 +3,17 @@ import os
 import time
 from abc import ABC
 from abc import abstractproperty
-from functools import lru_cache
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Optional
 
-import logger
 import pandas as pd
 import requests
-from tokens import Tokens
 
-log = logger.get_logger(__name__)
+from .logger import get_logger
+from .tokens import Tokens
+
+log = get_logger(__name__)
 
 
 def ms_to_dt(ms):
@@ -155,6 +156,7 @@ class CoinGecko(API):
         """
         return os.environ.get("COINGECKO_API_KEY")
 
+
 class GeckoTerminal(API):
     @property
     def requests_per_minute(self):
@@ -168,29 +170,10 @@ class GeckoTerminal(API):
         if not response.ok:
             response.raise_for_status()
 
-        data = response.json()['data']
+        data = response.json()["data"]
         tot_tvl = 0
         for d in data:
-            attrs = d.get('attributes', {})
+            attrs = d.get("attributes", {})
             tot_tvl += float(attrs.get("reserve_in_usd"))
 
         return tot_tvl
-
-if __name__ == "__main__":
-    usdc = Tokens.USDC
-    api = CoinGecko()
-    gt = GeckoTerminal()
-    print(gt.top_dex_tvl(usdc.address))
-    breakpoint()
-    results = []
-
-    # Test rate limiting
-    for tok in Tokens:
-        price = api.current_price(tok.address)
-        results.append(price)
-        print(f"{len(results):2d} | Token: {tok.symbol:6s} | Spot price: {price:.2f}")
-
-    info = api.token_info(usdc.address)
-    market_chart = api.market_chart(usdc.address)
-    ohlc = api.ohlc(usdc.coingecko_id)
-

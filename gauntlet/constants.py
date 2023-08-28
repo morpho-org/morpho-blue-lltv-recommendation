@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tokens import Tokens
+from .tokens import Tokens
 
 TOL = 1e-4
 ADDRESS_MAP = {t.address: t for t in Tokens}
@@ -25,4 +25,3 @@ SMALL_CAPS = {t for t in Tokens if t not in STABLECOINS and t not in LARGE_CAPS}
 PRICE_IMPACT_JSON_PATH = Path(__file__).parent.parent / "data/swap_sizes.json"
 IMPACTS = json.load(open(Path(__file__).parent.parent / "data/swap_sizes.json", "r"))
 DRAWDOWN_PKL_PATH = Path(__file__).parent.parent / "data/pairwise_drawdowns.pkl"
-

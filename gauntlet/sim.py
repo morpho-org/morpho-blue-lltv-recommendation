@@ -4,20 +4,23 @@ import os
 import pickle
 from pathlib import Path
 from typing import Tuple
-from utils import compute_liquidation_incentive
-from utils import current_price
 
-import logger
 import numpy as np
-from coingecko import CoinGecko
-from constants import BLUE_CHIPS
-from constants import LARGE_CAPS
-from constants import SMALL_CAPS
-from constants import STABLECOINS
-from constants import TOL
-from tokens import Tokens
 
-log = logger.get_logger(__name__)
+from .coingecko import CoinGecko
+from .constants import BLUE_CHIPS
+from .constants import LARGE_CAPS
+from .constants import SMALL_CAPS
+from .constants import STABLECOINS
+from .constants import TOL
+from .logger import get_logger
+from .tokens import Tokens
+from .utils import compute_liquidation_incentive
+from .utils import current_price
+
+
+# log = logger.get_logger(__name__)
+log = get_logger(__name__)
 
 
 # Use this over the coingecko API when testing to avoid rate limiting.
@@ -166,8 +169,8 @@ def simulate_insolvency(
     debt_tokens = (initial_collateral_usd * lltv) / debt_price
     min_collateral_price = collateral_price * (1 - max_drawdown)
     max_iters = int(np.ceil((initial_collateral_usd / repay_amount_usd) + 1))
-
-    for i in range(max_iters):
+    decrement = collateral_price * pct_decrease
+    for i in range(max_iters + 10):
         """
         To be precise, what we really do in the methodology is decrease the
         ratio of the collateral token's price to debt token's price
@@ -179,12 +182,13 @@ def simulate_insolvency(
         """
         # TODO: Abstract state update
         collateral_price = max(
-            min_collateral_price, collateral_price * (1 - pct_decrease)
+            # min_collateral_price, collateral_price * (1 - pct_decrease)
+            min_collateral_price, collateral_price - decrement
         )
         net_collateral_usd = collateral_tokens * collateral_price
         net_debt_usd = debt_price * debt_tokens
 
-        if i % 100 == 0:
+        if i % 1 == 0:
             log.debug(
                 f"{i=} | debt to collat: {net_debt_usd/net_collateral_usd:.3f}"
                 + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | {lltv=}"

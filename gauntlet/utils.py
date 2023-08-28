@@ -2,13 +2,13 @@ import datetime
 import pprint
 from functools import lru_cache
 
-import logger
-from coingecko import CoinGecko
-from cowswap import get_cowswap
-from tokens import Tokens
+from .coingecko import CoinGecko
+from .cowswap import get_cowswap
+from .logger import get_logger
+from .tokens import Tokens
 
 
-log = logger.get_logger(__name__)
+log = get_logger(__name__)
 MAX_ITERS = 20
 CG = CoinGecko()
 
@@ -88,22 +88,3 @@ def price_impact_size_cowswap(
         iters += 1
     return (max_sz + min_sz) / 2.0
 
-
-if __name__ == "__main__":
-    pis = {}
-    for tok in [Tokens.WETH, Tokens.USDC, Tokens.CRV]:
-        pis[tok.symbol] = {}
-        tok_out = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
-
-        for p in [0.25, 0.5]:
-            pis[tok.symbol][p] = price_impact_size_cowswap(
-                tok.address,
-                tok.decimals,
-                tok_out.address,
-                tok_out.decimals,
-                p,
-                max_sz_usd=2_000_000_000,
-            )
-            log.info(f"{tok} | impact size: {p:.3f} | swap size: {pis[tok.symbol][p]}")
-
-    pprint.pp(pis)

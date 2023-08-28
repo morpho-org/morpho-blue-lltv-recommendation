@@ -5,15 +5,16 @@ from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Optional
-from utils import price_impact_size_cowswap
 
 import numpy as np
 import pandas as pd
-from coingecko import CoinGecko
-from constants import DRAWDOWN_PKL_PATH
-from constants import PRICE_IMPACT_JSON_PATH
-from tokens import TokenInfo
-from tokens import Tokens
+
+from .coingecko import CoinGecko
+from .constants import DRAWDOWN_PKL_PATH
+from .constants import PRICE_IMPACT_JSON_PATH
+from .tokens import TokenInfo
+from .tokens import Tokens
+from .utils import price_impact_size_cowswap
 
 CG = CoinGecko()
 
@@ -167,11 +168,3 @@ def get_price_impacts(
                 json.dump(orig_impacts, json_file, indent=4)
 
     return impact_sizes
-
-
-if __name__ == "__main__":
-    tokens = [t for t in Tokens]
-    dds = get_drawdowns(tokens, update_cache=True)
-    with open(DRAWDOWN_PKL_PATH, "wb") as f:
-        pickle.dump(dds, f)
-    # pis = get_price_impacts(tokens, update_cache=True)

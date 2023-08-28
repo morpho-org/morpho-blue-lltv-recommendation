@@ -4,23 +4,25 @@ import argparse
 import json
 import pickle
 from typing import Tuple
-from utils import compute_liquidation_incentive
-from utils import current_price
 
-import logger
 import numpy as np
-from coingecko import CoinGecko
-from constants import ADDRESS_MAP
-from constants import STABLECOINS
-from constants import SYMBOL_MAP
-from sim import get_init_collateral_usd
-from sim import heuristic_drawdown
-from sim import simulate_insolvency
-from data_utils import get_drawdowns, get_price_impacts
-from tokens import TokenData
-from tokens import Tokens
 
-log = logger.get_logger(__name__)
+from .coingecko import CoinGecko
+from .constants import ADDRESS_MAP
+from .constants import STABLECOINS
+from .constants import SYMBOL_MAP
+from .data_utils import get_drawdowns
+from .data_utils import get_price_impacts
+from .logger import get_logger
+from .sim import get_init_collateral_usd
+from .sim import heuristic_drawdown
+from .sim import simulate_insolvency
+from .tokens import TokenData
+from .tokens import Tokens
+from .utils import compute_liquidation_incentive
+from .utils import current_price
+
+log = get_logger(__name__)
 
 CG = CoinGecko()
 
