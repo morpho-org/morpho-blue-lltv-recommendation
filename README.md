@@ -64,9 +64,8 @@ The setup script will create a python virtual environment and install the requir
 ### Inputs
 The risk tool is provided as a python script in this repository. To see all the parameters, run the following:
 ```bash
-~$ cd gauntlet
-~$ python sim_pair.py --help
-usage: sim_pair.py [-h] [-b BORROW] [-c COLLATERAL] [--pct_decrease PCT_DECREASE] [--initial_collateral_usd INITIAL_COLLATERAL_USD] [--collateral_price COLLATERAL_PRICE] [--debt_price DEBT_PRICE]
+~$ python main.py --help
+usage: main.py [-h] [-b BORROW] [-c COLLATERAL] [--pct_decrease PCT_DECREASE] [--initial_collateral_usd INITIAL_COLLATERAL_USD] [--collateral_price COLLATERAL_PRICE] [--debt_price DEBT_PRICE]
                    [--repay_amount_usd REPAY_AMOUNT_USD] [--max_drawdown MAX_DRAWDOWN] [--m M] [--beta BETA] [--min_liq_bonus MIN_LIQ_BONUS]
 
 optional arguments:
@@ -105,7 +104,7 @@ For instance, if we wanted to get a recommended LLTV for the following:
 Then we would run the following command for such a simulation:
 
 ```bash
-~$ python sim_pair.py   \
+~$ python main.py   \
  --collateral wsteth  \
  --borrow weth        \
  --max_drawdown 0.05  \
