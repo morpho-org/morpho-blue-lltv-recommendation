@@ -72,7 +72,7 @@ In a lending market, having a high LLTV (ex: 95% or higher) can create scenarios
 
 Consider an example involving a WETH/USDC lending market with a 97% LTV tranche and a 2% liquidation incentive. Here's what might happen:
 - A borrower supplies $100 WETH as collateral and borrows $97 USDC.
-- If the value of WETH drops, and the collateral is suddenly worth $98.5, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire $98.5 of WETH collateral.
+- If the value of WETH drops, and the collateral is suddenly worth \$98.5, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire $98.5$ of WETH collateral.
 - This leaves $0.43 USDC debt unbacked, leading to bad debt accrual.
 
 The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\% = (1 - \frac{LLTV}{1 + LI}) \times 100\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than 1.06%, lenders in such a market should probably opt for a more conservative LTV tranche.
