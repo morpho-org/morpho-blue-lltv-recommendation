@@ -5,15 +5,15 @@ import argparse
 import numpy as np
 
 from gauntlet.coingecko import CoinGecko
+from gauntlet.coingecko import current_price
 from gauntlet.coingecko import token_from_symbol_or_address
 from gauntlet.data_utils import get_drawdowns
 from gauntlet.data_utils import get_price_impacts
 from gauntlet.logger import get_logger
+from gauntlet.sim import compute_liquidation_incentive
 from gauntlet.sim import get_init_collateral_usd
 from gauntlet.sim import heuristic_drawdown
 from gauntlet.sim import simulate_insolvency
-from gauntlet.utils import compute_liquidation_incentive
-from gauntlet.utils import current_price
 
 
 log = get_logger(__name__)

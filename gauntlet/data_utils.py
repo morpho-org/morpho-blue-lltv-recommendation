@@ -2,7 +2,6 @@ import json
 import pickle
 from itertools import product
 from pathlib import Path
-from typing import Any
 from typing import List
 from typing import Optional
 
@@ -12,9 +11,10 @@ import pandas as pd
 from .coingecko import CoinGecko
 from .constants import DRAWDOWN_PKL_PATH
 from .constants import PRICE_IMPACT_JSON_PATH
+from .price_impact import price_impact_size
+from .price_impact import price_impact_size_approximate
 from .tokens import Token
 from .tokens import Tokens
-from .utils import price_impact_size_cowswap
 
 CG = CoinGecko()
 
@@ -44,15 +44,6 @@ def calc_drawdown(window: pd.Series):
     return (max(window) - window[-1]) / max(window)
 
 
-def compute_pairwise_drawdown(t1: Token, t2: Token) -> dict[Any]:
-    p1 = CG.market_chart(t1.address)
-    p2 = CG.market_chart(t1.address)
-    n = min(len(p1), len(p2))
-    df = p1[-n:] / p2[-n:1]
-    drawdowns = get_drawdowns(df, [90, 95, 99], [2, 7, 14, 30])
-    return drawdowns
-
-
 def compute_pair_drawdown(
     t1: Token,
     t2: Token,
@@ -69,7 +60,7 @@ def compute_pair_drawdown(
     percentile_drawdowns: list[int], percentile of drawdowns to compute
     days: list[int], time horizon to consider for the drawdowns (in days)
     """
-    if hist_prices:
+    if hist_prices and t1 in hist_prices and t2 in hist_prices:
         t1_prices = hist_prices[t1]["prices"][start_date:]
         t2_prices = hist_prices[t2]["prices"][start_date:]
     else:
@@ -107,7 +98,7 @@ def get_drawdowns(
         with open(DRAWDOWN_PKL_PATH, "rb") as f:
             dd_dict = pickle.load(f)
 
-    # If update_cache is True or tokens are missing from cache, calculate drawdowns
+    # If update_cache or tokens are missing from cache, calculate drawdowns
     if update_cache or any(
         (t1.symbol, t2.symbol) not in dd_dict
         for (t1, t2) in product(tokens, repeat=2)
@@ -142,6 +133,7 @@ def get_price_impacts(
     impacts: list[float] = [0.005, 0.25],
     update_cache: bool = False,
     use_cache: bool = False,
+    approximate_impact: bool = False,
 ) -> dict[Token, dict[float, float]]:
     impact_sizes = {}
 
@@ -149,16 +141,23 @@ def get_price_impacts(
         with open(PRICE_IMPACT_JSON_PATH, "r") as json_file:
             impact_sizes = json.load(json_file)
 
-    # If update_cache is True or tokens are missing, calculate impacts
+    # If update_cache or tokens are missing, calculate impacts
     if update_cache or any(tok.symbol not in impact_sizes for tok in tokens):
         for tok in tokens:
             impact_sizes[tok.symbol] = {}
             tgt = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
             for i in impacts:
-                impact_sizes[tok.symbol][str(i)] = price_impact_size_cowswap(
-                    tok.address, tok.decimals, tgt.address, tgt.decimals, i
-                )
+                if approximate_impact:
+                    impact_sizes[tok.symbol][
+                        str(i)
+                    ] = price_impact_size_approximate(
+                        tok.address, tok.decimals, tgt.address, tgt.decimals, i
+                    )
+                else:
+                    impact_sizes[tok.symbol][str(i)] = price_impact_size(
+                        tok.address, tok.decimals, tgt.address, tgt.decimals, i
+                    )
 
         if update_cache:
             # Write the updated data directly back to the file

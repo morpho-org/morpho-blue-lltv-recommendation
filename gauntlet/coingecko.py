@@ -4,6 +4,7 @@ import time
 from abc import ABC
 from abc import abstractproperty
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Optional
 
 import pandas as pd
@@ -193,6 +194,10 @@ class GeckoTerminal(API):
 
 
 def token_from_symbol_or_address(input_str: str) -> Token:
+    """
+    Creates a Token object from an input symbol or address.
+    This assumes that the token is an erc20 on ethereum.
+    """
     if "0x" in input_str and len(input_str) == 42:
         if input_str in ADDRESS_MAP:
             return ADDRESS_MAP[input_str]
@@ -220,3 +225,8 @@ def token_from_symbol_or_address(input_str: str) -> Token:
                 + "Please manually add the token to `tokens.py` before rerunning the script"
             )
         return SYMBOL_MAP[input_str]
+
+
+@lru_cache
+def current_price(addr: str) -> float:
+    return CoinGecko().current_price(addr)

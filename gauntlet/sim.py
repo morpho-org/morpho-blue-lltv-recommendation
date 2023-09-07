@@ -1,25 +1,16 @@
-import argparse
-import json
-import os
-import pickle
-from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 
-from .coingecko import CoinGecko
+from .coingecko import current_price
 from .constants import BLUE_CHIPS
 from .constants import LARGE_CAPS
 from .constants import SMALL_CAPS
-from .constants import STABLECOINS
 from .constants import TOL
 from .logger import get_logger
 from .tokens import Tokens
-from .utils import compute_liquidation_incentive
-from .utils import current_price
 
 
-# log = logger.get_logger(__name__)
 log = get_logger(__name__)
 
 
@@ -57,8 +48,10 @@ def get_init_collateral_usd(
             * current_price(borrow_token.address),
         )
     else:
-        return max(price_impacts[collat_token.symbol]["0.25"],
-                   price_impacts[borrow_token.symbol]["0.25"])
+        return max(
+            price_impacts[collat_token.symbol]["0.25"],
+            price_impacts[borrow_token.symbol]["0.25"],
+        )
 
 
 def heuristic_drawdown(
@@ -86,6 +79,16 @@ def heuristic_drawdown(
         dd = 0.35
 
     return max(dd, hist_dd)
+
+
+def compute_liquidation_incentive(m: float, beta: float, lltv: float) -> float:
+    """
+    Morpho Blue's proposed liquidation incentive formula
+    m: float, a constant that determines the max liq incentive
+    beta: float, constant
+    lltv: float, liquidation loan to value parameter of the market
+    """
+    return min(m, (1 / (beta * lltv + (1 - beta))) - 1)
 
 
 def simulate_insolvency(
@@ -150,7 +153,8 @@ def simulate_insolvency(
         # TODO: Abstract state update
         collateral_price = max(
             # min_collateral_price, collateral_price * (1 - pct_decrease)
-            min_collateral_price, collateral_price - decrement
+            min_collateral_price,
+            collateral_price - decrement,
         )
         net_collateral_usd = collateral_tokens * collateral_price
         net_debt_usd = debt_price * debt_tokens
@@ -170,11 +174,16 @@ def simulate_insolvency(
                 net_collateral_usd,
             )
             collateral_tokens -= collateral_claimed_usd / collateral_price
-            debt_tokens -= collateral_claimed_usd / (debt_price * (1 + liq_bonus))
+            debt_tokens -= collateral_claimed_usd / (
+                debt_price * (1 + liq_bonus)
+            )
 
             net_collateral_usd -= collateral_claimed_usd
             net_debt_usd -= collateral_claimed_usd / (1 + liq_bonus)
-            assert abs(net_collateral_usd - collateral_price * collateral_tokens) < TOL
+            assert (
+                abs(net_collateral_usd - collateral_price * collateral_tokens)
+                < TOL
+            )
             assert abs(net_debt_usd - debt_tokens * debt_price) < TOL
 
         # 0 collateral remaining. Stop simulation
@@ -192,7 +201,5 @@ def simulate_insolvency(
 
     assert (
         net_debt_usd / net_collateral_usd
-    ) < lltv, (
-        f"Simulation finished with ltv > lltv: {net_debt_usd/net_collateral_usd:.3f}"
-    )
+    ) < lltv, f"Simulation finished with ltv > lltv: {net_debt_usd/net_collateral_usd:.3f}"
     return 0
