@@ -4,14 +4,15 @@ import time
 from abc import ABC
 from abc import abstractproperty
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Optional
 
 import pandas as pd
 import requests
 
+from .constants import ADDRESS_MAP
+from .constants import SYMBOL_MAP
 from .logger import get_logger
-from .tokens import Tokens
+from .tokens import Token
 
 log = get_logger(__name__)
 
@@ -26,7 +27,9 @@ def ms_to_dt(ms):
 class API(ABC):
     def __init__(self):
         self._last_call_time = 0  # time of last request
-        self._calls_in_period = 0  # number of api requests in the current period
+        self._calls_in_period = (
+            0  # number of api requests in the current period
+        )
 
     @abstractproperty
     def requests_per_minute(self) -> float:
@@ -38,7 +41,10 @@ class API(ABC):
 
         if self._calls_in_period >= self.requests_per_minute:
             return period_length
-        elif dt > period_length or self._calls_in_period < self.requests_per_minute:
+        elif (
+            dt > period_length
+            or self._calls_in_period < self.requests_per_minute
+        ):
             # no need to wait since the elapsed time is long enough
             return 0
 
@@ -84,7 +90,9 @@ class CoinGecko(API):
     @property
     def api_url(self):
         return (
-            CoinGecko.PRO_URL if self.get_coingecko_api_key() else CoinGecko.PUBLIC_URL
+            CoinGecko.PRO_URL
+            if self.get_coingecko_api_key()
+            else CoinGecko.PUBLIC_URL
         )
 
     @property
@@ -101,7 +109,9 @@ class CoinGecko(API):
         response = self.make_request(url=url)
         return response.json()
 
-    def current_price(self, address: str, chain: str = "ethereum", currency="usd"):
+    def current_price(
+        self, address: str, chain: str = "ethereum", currency="usd"
+    ):
         address = address.lower()
         url = f"{self.api_url}/simple/token_price/{chain}?contract_addresses={address}&vs_currencies={currency}"
         response = self.make_request(url=url)
@@ -137,7 +147,9 @@ class CoinGecko(API):
         return df
 
     def ohlc(self, cg_token_id: str, currency: str = "usd"):
-        url = f"{self.api_url}/coins/{cg_token_id}/ohlc?vs_currency=usd&days=max"
+        url = (
+            f"{self.api_url}/coins/{cg_token_id}/ohlc?vs_currency=usd&days=max"
+        )
         response = self.make_request(url=url)
 
         if not response.ok:
@@ -178,3 +190,33 @@ class GeckoTerminal(API):
             tot_tvl += float(attrs.get("reserve_in_usd"))
 
         return tot_tvl
+
+
+def token_from_symbol_or_address(input_str: str) -> Token:
+    if "0x" in input_str and len(input_str) == 42:
+        if input_str in ADDRESS_MAP:
+            return ADDRESS_MAP[input_str]
+        try:
+            token_info = CG.token_info(input_str)
+            symbol = token_info["symbol"]
+            decimals = token_info["detail_platforms"]["ethereum"][
+                "decimal_place"
+            ]
+            name = token_info["name"]
+            return Token(
+                symbol=symbol,
+                decimals=decimals,
+                address=input_str,
+                coingecko_id=name,
+            )
+        except Exception as e:
+            raise ValueError(
+                f"Could not find token for {input_str}. Exception: {e}"
+            )
+    else:
+        if input_str not in SYMBOL_MAP:
+            raise ValueError(
+                "Unsupported token symbol. "
+                + "Please manually add the token to `tokens.py` before rerunning the script"
+            )
+        return SYMBOL_MAP[input_str]

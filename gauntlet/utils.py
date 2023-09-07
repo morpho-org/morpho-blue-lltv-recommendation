@@ -1,11 +1,9 @@
 import datetime
-import pprint
 from functools import lru_cache
 
 from .coingecko import CoinGecko
 from .cowswap import get_cowswap
 from .logger import get_logger
-from .tokens import Tokens
 
 
 log = get_logger(__name__)
@@ -13,7 +11,7 @@ MAX_ITERS = 20
 CG = CoinGecko()
 
 
-def compute_liquidation_incentive(m: float, beta: float, lltv: float):
+def compute_liquidation_incentive(m: float, beta: float, lltv: float) -> float:
     """
     Morpho Blue's proposed liquidation incentive formula
     m: float, a constant that determines the max liq incentive
@@ -23,14 +21,14 @@ def compute_liquidation_incentive(m: float, beta: float, lltv: float):
     return min(m, (1 / (beta * lltv + (1 - beta))) - 1)
 
 
-def ms_to_dt(ms):
+def ms_to_dt(ms) -> datetime.datetime:
     timestamp_seconds = ms / 1000
     dt_object = datetime.datetime.fromtimestamp(timestamp_seconds)
     return dt_object.strftime("%Y-%m-%d")
 
 
 @lru_cache
-def current_price(addr: str):
+def current_price(addr: str) -> float:
     return CG.current_price(addr)
 
 
@@ -42,7 +40,7 @@ def price_impact_size_cowswap(
     target_price_impact: float,
     rtol=5e-2,
     max_sz_usd=1_000_000_000,
-):
+) -> float:
     def cowswap_oracle(token_in: str, token_out: str, size: float):
         """
         token_in: address of the sell token
@@ -67,13 +65,15 @@ def price_impact_size_cowswap(
 
     cg = CoinGecko()
     spot_in = cg.current_price(token_in)
-    spot_out = cg.current_price(token_out)
     min_sz = 0
     max_sz = max_sz_usd / spot_in
     iters = 0
     price_impact = 1
 
-    while abs(1 - (price_impact / target_price_impact)) > rtol and iters < MAX_ITERS:
+    while (
+        abs(1 - (price_impact / target_price_impact)) > rtol
+        and iters < MAX_ITERS
+    ):
         mid = (max_sz + min_sz) / 2.0
         price_impact = cowswap_oracle(token_in, token_out, mid)
 
@@ -87,4 +87,3 @@ def price_impact_size_cowswap(
         )
         iters += 1
     return (max_sz + min_sz) / 2.0
-
