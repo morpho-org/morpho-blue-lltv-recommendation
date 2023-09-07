@@ -8,15 +8,15 @@ from .constants import LARGE_CAPS
 from .constants import SMALL_CAPS
 from .constants import TOL
 from .logger import get_logger
-from .tokens import Tokens
+from .tokens import Token
 
 
 log = get_logger(__name__)
 
 
 def get_init_collateral_usd(
-    collat_token: Tokens,
-    borrow_token: Tokens,
+    collat_token: Token,
+    borrow_token: Token,
     price_impacts: dict[str, dict[str, float]],
 ) -> float:
     """
@@ -55,12 +55,12 @@ def get_init_collateral_usd(
 
 
 def heuristic_drawdown(
-    t1: Tokens, t2: Tokens, drawdowns: dict[Tuple[str, str], float]
+    t1: Token, t2: Token, drawdowns: dict[Tuple[str, str], float]
 ) -> float:
     """
     t1: Token, the collateral asset of a market
     t2: Token, the borrowable asset of a market
-    drawdowns: dict, dict of the collateral/borrow Tokens pair mapped to
+    drawdowns: dict, dict of the collateral/borrow Token pair mapped to
         the time horizon max drawdowns of their price ratio.
     """
     # drawdown is a dict: symbol pair -> dict of time duration -> {percentile -> value}
@@ -71,12 +71,12 @@ def heuristic_drawdown(
     if hist_dd < 0.1:
         return max(hist_dd, 0.02)
 
-    if t1 in LARGE_CAPS and t2 in LARGE_CAPS:
-        dd = 0.25
+    if t1 in BLUE_CHIPS and t2 in BLUE_CHIPS:
+        dd = 0.4
     elif t1 in SMALL_CAPS and t2 in SMALL_CAPS:
-        dd = 0.5
+        dd = 0.6
     else:
-        dd = 0.35
+        dd = 0.5
 
     return max(dd, hist_dd)
 
