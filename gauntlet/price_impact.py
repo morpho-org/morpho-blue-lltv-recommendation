@@ -4,15 +4,16 @@ import requests
 
 from .coingecko import CoinGecko
 from .coingecko import current_price
+from .logger import get_logger
+from .tokens import Token
 
-
+log = get_logger(__name__)
 MAX_ITERS = 20
 
 
 def cowswap_query(
-    token_in: str,
-    token_out: str,
-    token_in_decimals: int,
+    token_in: Token,
+    token_out: Token,
     amount: float,
     quality: str = "optimal",
 ) -> requests.Request:
@@ -29,11 +30,11 @@ def cowswap_query(
     """
     url = "https://api.cow.fi/mainnet/api/v1/quote"
     params = {
-        "sellToken": token_in,
-        "buyToken": token_out,
+        "sellToken": token_in.address,
+        "buyToken": token_out.address,
         "receiver": "0x0000000000000000000000000000000000000000",
         "partiallyFillable": False,
-        "sellAmountBeforeFee": str(int(amount * 10**token_in_decimals)),
+        "sellAmountBeforeFee": str(int(amount * 10**token_in.decimals)),
         "sellTokenBalance": "erc20",
         "buyTokenBalance": "erc20",
         "kind": "sell",
@@ -47,38 +48,34 @@ def cowswap_query(
 
 
 def price_impact_size(
-    token_in: str,
-    token_in_decimals: int,
-    token_out: str,
-    token_out_decimals: int,
+    token_in: Token,
+    token_out: Token,
     target_price_impact: float,
     rtol=5e-2,
     max_sz_usd=1_000_000_000,
 ) -> float:
-    def cowswap_oracle(token_in: str, token_out: str, size: float):
+    def cowswap_oracle(token_in: Token, token_out: Token, size: float):
         """
         token_in: address of the sell token
         token_out: address of the buy token
         size: amount of token_in to sell
         """
-        response = cowswap_query(
-            token_in, token_out, token_in_decimals, size, quality="optimal"
-        )
+        response = cowswap_query(token_in, token_out, size, quality="optimal")
         amount_in_usd = (
             float(response["quote"]["sellAmount"])
-            / (10**token_in_decimals)
-            * current_price(token_in)
+            / (10**token_in.decimals)
+            * current_price(token_in.address)
         )
         amount_out_usd = (
             float(response["quote"]["buyAmount"])
-            / (10**token_out_decimals)
-            * current_price(token_out)
+            / (10**token_out.decimals)
+            * current_price(token_out.address)
         )
         price_impact = 1 - float(amount_out_usd / amount_in_usd)
         return price_impact
 
     cg = CoinGecko()
-    spot_in = cg.current_price(token_in)
+    spot_in = cg.current_price(token_in.address)
     min_sz = 0
     max_sz = max_sz_usd / spot_in
     iters = 0
@@ -96,10 +93,11 @@ def price_impact_size(
         else:
             max_sz = mid
 
-        log.debug(
-            f"{iters:2d} | x = {mid:.2f} | price impact: {price_impact:.4f} | swap total: ${mid * spot_in/1e6:.2f}mil"
+        log.info(
+            f"{iters:2d} | {token_in.symbol:6s} | swap size = {mid:.2f} | price impact: {price_impact:.4f} | swap total: ${mid * spot_in/1e6:.2f}mil"
         )
         iters += 1
+
     return (max_sz + min_sz) / 2.0
 
 

@@ -227,6 +227,7 @@ def token_from_symbol_or_address(input_str: str) -> Token:
         return SYMBOL_MAP[input_str]
 
 
+# We cache these values so that subsequent calls do not send CoinGecko API requests
 @lru_cache
 def current_price(addr: str) -> float:
     return CoinGecko().current_price(addr)

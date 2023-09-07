@@ -11,11 +11,13 @@ import pandas as pd
 from .coingecko import CoinGecko
 from .constants import DRAWDOWN_PKL_PATH
 from .constants import PRICE_IMPACT_JSON_PATH
+from .logger import get_logger
 from .price_impact import price_impact_size
 from .price_impact import price_impact_size_approximate
 from .tokens import Token
 from .tokens import Tokens
 
+log = get_logger(__name__)
 CG = CoinGecko()
 
 
@@ -143,6 +145,7 @@ def get_price_impacts(
 
     # If update_cache or tokens are missing, calculate impacts
     if update_cache or any(tok.symbol not in impact_sizes for tok in tokens):
+        log.info("Computing price impacts. This may take 3-5 minutes.")
         for tok in tokens:
             impact_sizes[tok.symbol] = {}
             tgt = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
@@ -156,8 +159,10 @@ def get_price_impacts(
                     )
                 else:
                     impact_sizes[tok.symbol][str(i)] = price_impact_size(
-                        tok.address, tok.decimals, tgt.address, tgt.decimals, i
+                        tok, tgt, i
                     )
+
+        log.info("Finished computing price impacts.")
 
         if update_cache:
             # Write the updated data directly back to the file
