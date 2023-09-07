@@ -16,8 +16,6 @@ from gauntlet.sim import get_init_collateral_usd
 from gauntlet.sim import heuristic_drawdown
 from gauntlet.sim import simulate_insolvency
 from gauntlet.sim_pair import token_from_symbol_or_address
-from gauntlet.tokens import TokenData
-from gauntlet.tokens import Tokens
 from gauntlet.utils import compute_liquidation_incentive
 from gauntlet.utils import current_price
 
@@ -167,7 +165,7 @@ if __name__ == "__main__":
         "--beta", type=float, default=0.3, help="Liquidation incentive parameter"
     )
     parser.add_argument(
-        "--min_liq_bonus", type=float, default=0.01, help="Minimum liquidation bonus"
+        "--min_liq_bonus", type=float, default=0.005, help="Minimum liquidation bonus"
     )
     parser.add_argument(
         "--update_cache",

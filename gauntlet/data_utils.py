@@ -12,7 +12,7 @@ import pandas as pd
 from .coingecko import CoinGecko
 from .constants import DRAWDOWN_PKL_PATH
 from .constants import PRICE_IMPACT_JSON_PATH
-from .tokens import TokenInfo
+from .tokens import Token
 from .tokens import Tokens
 from .utils import price_impact_size_cowswap
 
@@ -20,8 +20,8 @@ CG = CoinGecko()
 
 
 def get_prices(
-    tokens: List[TokenInfo], start_date="2022-07-01", update_cache=False
-) -> dict[TokenInfo, pd.DataFrame]:
+    tokens: List[Token], start_date="2022-07-01", update_cache=False
+) -> dict[Token, pd.DataFrame]:
     """
     Queries the CoinGecko api for the historical price data of the
     input tokens. If the `update_cache` flag is toggled on, this will also
@@ -44,7 +44,7 @@ def calc_drawdown(window: pd.Series):
     return (max(window) - window[-1]) / max(window)
 
 
-def compute_pairwise_drawdown(t1: TokenInfo, t2: TokenInfo) -> dict[Any]:
+def compute_pairwise_drawdown(t1: Token, t2: Token) -> dict[Any]:
     p1 = CG.market_chart(t1.address)
     p2 = CG.market_chart(t1.address)
     n = min(len(p1), len(p2))
@@ -54,9 +54,9 @@ def compute_pairwise_drawdown(t1: TokenInfo, t2: TokenInfo) -> dict[Any]:
 
 
 def compute_pair_drawdown(
-    t1: TokenInfo,
-    t2: TokenInfo,
-    hist_prices: Optional[dict[TokenInfo, pd.DataFrame]] = None,
+    t1: Token,
+    t2: Token,
+    hist_prices: Optional[dict[Token, pd.DataFrame]] = None,
     percentile_drawdowns: list[float] = [90, 95, 99],
     days: list[int] = [1, 7, 14, 30],
     start_date="2022-07-01",
@@ -90,10 +90,10 @@ def compute_pair_drawdown(
 
 
 def get_drawdowns(
-    tokens: List[TokenInfo], update_cache: bool = False, use_cache: bool = False
-) -> dict[TokenInfo, dict[int, dict[float, float]]]:
+    tokens: List[Token], update_cache: bool = False, use_cache: bool = False
+) -> dict[Token, dict[int, dict[float, float]]]:
     """
-    tokens: list of Tokens or TokenData instances
+    tokens: list of tokens
     update_cache: bool, if true, this function will update the cached drawdown
         file with the new drawdown numbers.
 
@@ -116,7 +116,9 @@ def get_drawdowns(
         hist_prices = {t: CG.market_chart(t.address) for t in tokens}
         dd_dict.update(
             {
-                (t1.symbol, t2.symbol): compute_pair_drawdown(t1, t2, hist_prices)
+                (t1.symbol, t2.symbol): compute_pair_drawdown(
+                    t1, t2, hist_prices
+                )
                 for (t1, t2) in product(tokens, repeat=2)
                 if t1 != t2
             }
@@ -136,11 +138,11 @@ def get_drawdowns(
 
 
 def get_price_impacts(
-    tokens: List[TokenInfo],
+    tokens: List[Token],
     impacts: list[float] = [0.005, 0.25],
     update_cache: bool = False,
     use_cache: bool = False,
-) -> dict[TokenInfo, dict[float, float]]:
+) -> dict[Token, dict[float, float]]:
     impact_sizes = {}
 
     if use_cache:

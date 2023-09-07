@@ -102,6 +102,7 @@ class CoinGecko(API):
         return response.json()
 
     def current_price(self, address: str, chain: str = "ethereum", currency="usd"):
+        address = address.lower()
         url = f"{self.api_url}/simple/token_price/{chain}?contract_addresses={address}&vs_currencies={currency}"
         response = self.make_request(url=url)
         resp_js = response.json()

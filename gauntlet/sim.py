@@ -23,32 +23,6 @@ from .utils import current_price
 log = get_logger(__name__)
 
 
-# Use this over the coingecko API when testing to avoid rate limiting.
-PRICES_CACHE = {
-    "aave": 65.88,
-    "1inch": 0.307756,
-    "rpl": 27.35,
-    "link": 7.47,
-    "wbtc": 29450,
-    "reth": 2005.78,
-    "weth": 1847.87,
-    "cbeth": 1932.11,
-    "wsteth": 2095.09,
-    "snx": 2.54,
-    "bal": 4.2,
-    "ens": 8.95,
-    "uni": 6.18,
-    "mkr": 1248.92,
-    "ldo": 1.85,
-    "crv": 0.595425,
-    "usdc": 1.001,
-    "usdt": 0.99958,
-    "dai": 1.0,
-    "lusd": 0.994649,
-    "frax": 0.999439,
-}
-
-
 def get_init_collateral_usd(
     collat_token: Tokens,
     borrow_token: Tokens,
@@ -82,16 +56,9 @@ def get_init_collateral_usd(
             price_impacts[borrow_token.symbol]["0.25"]
             * current_price(borrow_token.address),
         )
-    elif collat_token in STABLECOINS:  # collat stable
-        return price_impacts[collat_token.symbol]["0.25"]
-    elif borrow_token in STABLECOINS:
-        return price_impacts[borrow_token.symbol]["0.25"]
     else:
-        return 20_000_000
-        # raise ValueError(
-        #     f"init collateral for {collat_token.symbol} doesnt match existing"
-        #     + " scenarios. Please pick an initial collateral position."
-        # )
+        return max(price_impacts[collat_token.symbol]["0.25"],
+                   price_impacts[borrow_token.symbol]["0.25"])
 
 
 def heuristic_drawdown(
