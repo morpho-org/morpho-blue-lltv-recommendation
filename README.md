@@ -35,9 +35,9 @@ Morpho Blue is lending protocol that consists of independent lending "markets". 
 Borrowers and lenders decide which LLTV tranche to borrow or supply into when they participate in a market.
     
 ### Liquidation Example
-Suppose we have a WETH collateral / USDC borrow market with a $0.75$ LLTV tranches. Larry (a lender) supplies <span>$</span>100 USDC into this $0.75$ LLTV bucket. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies <span>$</span>100 WETH collateral to borrow <span>$</span>60 USDC. At this point, his LTV is $0.6$.
+Suppose we have a WETH collateral / USDC borrow market with a $0.75$ LLTV tranches. Larry (a lender) supplies $\textdollar 100$ USDC into this $0.75$ LLTV bucket. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies $\textdollar 100$ WETH collateral to borrow $\textdollar 60$ USDC. At this point, his LTV is $0.6$.
 
-If/when the price of WETH drops by 20%, Bob's collateral will be worth <span>$</span>80. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
+If/when the price of WETH drops by 20%, Bob's collateral will be worth $\textdollar 80$. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
 
 
 
@@ -59,11 +59,11 @@ When bad debt is generated in the aftermath of a liquidation, it is immediately 
 ### Bad Debt Example
 Suppose we have a WETH collateral, USDC borrow lending market with the following:
 - Lenders Alice and Bob, and a borrower Eve are all in the $80\%$ LLTV tranche.
-- The liquidation incentive is $10%$
-- Lenders Alice and Bob have both supplied <span>$</span>$100$ USDC each in this market and are the only suppliers in this tranche.
-- Borrower Eve provides <span>$</span>$200$ WETH in collateral to borrow <span>$</span>$160$ USDC. 
+- The liquidation incentive is $10\%$
+- Lenders Alice and Bob have both supplied $\textdollar 100$ USDC each in this market and are the only suppliers in this tranche.
+- Borrower Eve provides $\textdollar 200$ WETH in collateral to borrow $\textdollar 160$ USDC. 
 
-If the value of WETH drops such that the value of Eve's collateral is worth <span>$</span>$165$. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay <span>$</span>150 USDC of her debt to claim $\textdollar 150 \times (1 + 0.1) = 165$. At the end of this liquidation, Eve will have <span>$</span>$0$ in collateral and <span>$</span>$10$ in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth <span>$</span>$95$ USDC.
+If the value of WETH drops such that the value of Eve's collateral is worth $\textdollar 165$. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay $\textdollar 150$ USDC of her debt to claim $\textdollar 150 \times (1 + 0.1) = \textdollar 165$. At the end of this liquidation, Eve will have $\textdollar 0$ in collateral and $\textdollar 10$ in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth $\textdollar 95$ USDC.
 
 ### How Does Bad Debt Arise?
 Bad debt accrues when a borrower has some amount of debt that is backed by 0 collateral.  An undercollateralized borrow position primarily stems from liquidations not occuring in a timely manner. Ideally, if the price of the collateral asset ever suffers a large price drop, liquidators would act swiftly to repay the borrower's debt and claim collateral once a borrower is eligible for liquidation, before the loan to value of the position reaches insolvency territory. Delays in liquidation can occur due to:
@@ -79,10 +79,10 @@ In a lending market, having a high LLTV (ex: 95% or higher) can create scenarios
 
 Consider an example involving a WETH/USDC lending market with a 97% LTV tranche and a 2% liquidation incentive. Here's what might happen:
 - A borrower supplies $100 WETH as collateral and borrows $97 USDC.
-- If the value of WETH drops, and the collateral is suddenly worth <span>$</span>98.5, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire <span>$</span>98.5 of WETH collateral.
-- This leaves $0.43 USDC debt unbacked, leading to bad debt accrual.
+- If the value of WETH drops, and the collateral is suddenly worth $\textdollar 98.5$, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire $\textdollar 98.5$ of WETH collateral.
+- This leaves $\textdollar 0.43$ USDC debt unbacked, leading to bad debt accrual.
 
-The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\% = (1 - \frac{LLTV}{1 + LI}) \times 100\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than 1.06%, lenders in such a market should probably opt for a more conservative LTV tranche.
+The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\% = (1 - \frac{LLTV}{1 + LI}) \times 100\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than $1.06\%$, lenders in such a market should probably opt for a more conservative LTV tranche.
 
 
 
