@@ -116,7 +116,7 @@ Specifically, we use:
 This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say $0.7$ instead.
 
 - **liquidate a portion of the borrow position:** At the given timestep, if the borrower's debt to collateral ratio (LTV) is above their LLTV, we liquidate a portion of their position.
-We repay an amount equal to the $0.5\\%$ price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $\textdollar 1000$ swap of the collateral asset to USDC yields $\textdollar 995$, then the $0.50\\%$ price impact swap size is $1000$ and the liquidation amount will be set to $\textdollar 1000$.
+We repay an amount equal to the $0.5\\%$ price impact swap size of the collateral asset or borrow asset (whichever is smaller) as computed through CowSwap.
 
 Each of the parameters specified thus far is a parameter that the user can also input into the risk tool so as to conform to the assumptions they want to bake into the simulation. User can specify their chosen parameters through CLI arguments as we will demonstrate in the subsequent section.
 
@@ -124,7 +124,7 @@ Each of the parameters specified thus far is a parameter that the user can also 
 
 The simulation stops when the borrower has no more collateral, no more debt, or we have reached the maximum iteration count. Any undercollateralized debt that remains at the end of the simulation is insolvent debt.
 
-We run this simulation LLTV values in the set: $\{0.01, 0.02, \ldots, 0.98, 0.99\}$. The tool/script will recommend the largest LLTV value that incurs zero bad debt in these simulations.
+We run this simulation LLTV values in the set: $\\{0.01, 0.02, \ldots, 0.98, 0.99\\}$. The tool/script will recommend the largest LLTV value that incurs zero bad debt in these simulations.
 
 
 ### Parameters 
