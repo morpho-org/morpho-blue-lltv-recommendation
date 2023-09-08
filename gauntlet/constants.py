@@ -17,7 +17,6 @@ STABLECOINS = [
     Tokens.LUSD,
 ]
 
-# TODO: Parameterize LARGE_CAPS based on price impact sizes
 LARGE_CAPS = {Tokens.WETH, Tokens.WSTETH, Tokens.RETH, Tokens.WBTC}
 BLUE_CHIPS = LARGE_CAPS.union(set(STABLECOINS))
 SMALL_CAPS = {t for t in Tokens if t not in STABLECOINS and t not in LARGE_CAPS}

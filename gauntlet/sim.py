@@ -139,9 +139,7 @@ def simulate_insolvency(
         same under both calculations, which is what ultimately is compared against
         ltv to determine liquidation eligibility, so this is fine.
         """
-        # TODO: Abstract state update
         collateral_price = max(
-            # min_collateral_price, collateral_price * (1 - pct_decrease)
             min_collateral_price,
             collateral_price - decrement,
         )
