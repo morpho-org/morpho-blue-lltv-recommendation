@@ -195,7 +195,7 @@ For instance, if we wanted to get a recommended LLTV for the following:
 Then we would run the following command for such a simulation:
 
 ```bash
-~/morpho:~$ python main.py \
+python main.py \
  --collateral wsteth                    \
  --borrow weth                          \
  --max_drawdown 0.05                    \
@@ -206,15 +206,19 @@ Then we would run the following command for such a simulation:
 
 By default, we use cached drawdown and cached price impact numbers that have been pre-computed. We do this because querying CoinGecko and CowSwap for some of this data can take more time than a user may be willing to wait (on the order of 10-20 seconds). The downside of this is that if certain market conditions change, or if a market event occurs that has a large impact on price or liquidity of an asset, then the cached price impact and drawdown numbers may no longer be relevant and the resulting simulation results may give a misleading recommendation for LLTV. The user can instead run the risk tool script with the `--update_cache` flag to ensure that fresh drawdown and price impact numbers are fetched:
 ```bash
-~/morpho:~$ python main.py \
+python main.py \
  --collateral wsteth                 \
  --borrow weth                       \
- --max_drawdown 0.05                 \
- --pct_decrease 0.01                 \
- --initial_collateral_usd 400000000  \
- --repay_amount_usd 10000000         \
+ --max_drawdown 0.5                  \
  --update_cache
 ```
+Users can also pass in token addresses for the `--collateral` and `--borrow` tokens like so. For instance, to get the recommended LLTV for a LINK collateral/DAI borrow market, we can do:
+```
+python main.py \
+ --collateral 0x514910771af9ca656af840dff83e8264ecf986ca        \
+ --borrow 0x6b175474e89094c44da98b954eedeac495271d0f
+```
+The risk tool currently only allows users to enter Ethereum tokens/token addresses.
 
 While creating this tool, we aimed to provide a reasonable set of default methods for setting parameters such as max drawdown, per iteration percent decrease, repay amount, and initial borrow position. However, specific assets may exhibit unique properties that render these default settings less suitable. In these markets, users have the flexibility to override these settings and manually specify the parameters to better align with the assets' characteristics. We encourage users to explore and experiment with these adjustable parameters to tailor the tool to their particular needs and risk tolerance. The demo notebook shows experiments on the various parameters of the simulation and how they might affect the recommended LLTV values.
 
