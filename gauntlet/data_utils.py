@@ -13,7 +13,6 @@ from .constants import DRAWDOWN_PKL_PATH
 from .constants import PRICE_IMPACT_JSON_PATH
 from .logger import get_logger
 from .price_impact import price_impact_size
-from .price_impact import price_impact_size_approximate
 from .tokens import Token
 from .tokens import Tokens
 
@@ -28,6 +27,9 @@ def get_prices(
     Queries the CoinGecko api for the historical price data of the
     input tokens. If the `update_cache` flag is toggled on, this will also
     saves the resulting price DataFrames to csvs.
+
+    Returns: a dict mapping Token objects to dataframes of its historical
+        daily prices, starting from the input start_date
     """
     prices = {}
     for t in tokens:
@@ -141,10 +143,16 @@ def get_price_impacts(
     impacts: list[float] = [0.005, 0.25],
     update_cache: bool = False,
     use_cache: bool = False,
-    approximate_impact: bool = False,
 ) -> dict[Token, dict[float, float]]:
     """
-    Computes
+    Computes the swap sizes necessary to incur the given price impacts
+    from the input impacts list.
+
+    tokens: list of Tokens to compute price impacts for
+    impacts: list of floats of price impacts that we want to compute
+        the corresponding price swaps for
+    update_cache: bool, whether or not to update the price impact cache file
+    use_cache: bool, whether or not to just return the cache of impact sizes
 
     Returns: dict mapping Tokens to a dict of
         price impact -> size of swap necessary to incur the given price impact
@@ -154,6 +162,8 @@ def get_price_impacts(
         tokenA: {0.005: 1000, 0.25: 100000}
         tokenB: {0.005: 300, 0.25: 50000}
     }
+    This return indicates that swapping 1000 tokens of tokenA for USDC will
+    incur 0.5% slippage.
     """
     impact_sizes = {}
 
@@ -169,16 +179,9 @@ def get_price_impacts(
             tgt = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
 
             for i in impacts:
-                if approximate_impact:
-                    impact_sizes[tok.symbol][
-                        str(i)
-                    ] = price_impact_size_approximate(
-                        tok.address, tok.decimals, tgt.address, tgt.decimals, i
-                    )
-                else:
-                    impact_sizes[tok.symbol][str(i)] = price_impact_size(
-                        tok, tgt, i
-                    )
+                impact_sizes[tok.symbol][str(i)] = price_impact_size(
+                    tok, tgt, i
+                )
 
         log.info("Finished computing price impacts.")
 

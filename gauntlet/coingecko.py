@@ -18,7 +18,7 @@ from .tokens import Token
 log = get_logger(__name__)
 
 
-def ms_to_dt(ms: float) -> datetime.datetime:
+def ms_to_dt(ms: float) -> str:
     timestamp_seconds = ms / 1000
     dt_object = datetime.datetime.fromtimestamp(timestamp_seconds)
     return dt_object.strftime("%Y-%m-%d")

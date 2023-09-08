@@ -21,9 +21,8 @@ def cowswap_query(
     Returns the raw cowswap API response for a token swap from {token_in} to {token_out}
     of size {amount}.
 
-    token_in: str, token address of the sell token
-    token_out: str, token address of the buy token
-    token_in_decimals: int, number of decimals of token_in
+    token_in: Token, token object representing the sell token
+    token_out: Token, token object representing the buy token
     amount: float, number of tokens of token_in to be sold
     quality: str (optimal or fast)
 
@@ -54,6 +53,20 @@ def price_impact_size(
     rtol=5e-2,
     max_sz_usd=1_000_000_000,
 ) -> float:
+    '''
+    Computes the number of token_in necessary to get the target_price_impact
+    when swapping token_in for token_out.
+
+    token_in: Token object to swap out of
+    token_out: Token object to swap into of
+    target_price_impact: float
+    rtol: float, relative tolerance
+    max_sz_usd: float, upper bound for the amount of token_in necessary
+        to generate the given target_price_impact
+
+    Returns: float, number of tokens necessary to get the desired
+        target_price_impact.
+    '''
     def cowswap_oracle(token_in: Token, token_out: Token, size: float) -> float:
         """
         token_in: address of the sell token
