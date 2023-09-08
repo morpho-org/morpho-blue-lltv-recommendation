@@ -37,7 +37,7 @@ Borrowers and lenders decide which LLTV tranche to borrow or supply into when th
 ### Liquidation Example
 Suppose we have a WETH collateral / USDC borrow market with a $0.75$ LLTV tranches. Larry (a lender) supplies $\textdollar 100$ USDC into this $0.75$ LLTV bucket. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies $\textdollar 100$ WETH collateral to borrow $\textdollar 60$ USDC. At this point, his LTV is $0.6$.
 
-If/when the price of WETH drops by 20%, Bob's collateral will be worth $\textdollar 80$. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
+If/when the price of WETH drops by $20\\%$, Bob's collateral will be worth $\textdollar 80$. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
 
 
 
@@ -58,8 +58,8 @@ When bad debt is generated in the aftermath of a liquidation, it is immediately 
 
 ### Bad Debt Example
 Suppose we have a WETH collateral, USDC borrow lending market with the following:
-- Lenders Alice and Bob, and a borrower Eve are all in the $80\%$ LLTV tranche.
-- The liquidation incentive is $10\%$
+- Lenders Alice and Bob, and a borrower Eve are all in the $80\\%$ LLTV tranche.
+- The liquidation incentive is $10\\%$
 - Lenders Alice and Bob have both supplied $\textdollar 100$ USDC each in this market and are the only suppliers in this tranche.
 - Borrower Eve provides $\textdollar 200$ WETH in collateral to borrow $\textdollar 160$ USDC. 
 
@@ -75,14 +75,14 @@ Bad debt accrues when a borrower has some amount of debt that is backed by 0 col
  If the slippage amount plus any transaction/gas fees is larger than the liquidation bonus, they likely will not liquidate a borrow position as it is no longer profitable to do so. If the collateral asset continues to decline in value (or conversely, the borrow asset increases in value), the borrow position will get closer to becoming undercollateralized and ultimately accrue bad debt.
 
 **Narrow Healthy Liquidation Window**
-In a lending market, having a high LLTV (ex: 95% or higher) can create scenarios where the opportunity window for safe or "healthy" liquidations is extremely limited. If liquidators miss this brief opportunity, subsequent price changes can guarantee that liquidations result in bad debt.
+In a lending market, having a high LLTV (ex: $95\\%$ or higher) can create scenarios where the opportunity window for safe or "healthy" liquidations is extremely limited. If liquidators miss this brief opportunity, subsequent price changes can guarantee that liquidations result in bad debt.
 
-Consider an example involving a WETH/USDC lending market with a 97% LTV tranche and a 2% liquidation incentive. Here's what might happen:
+Consider an example involving a WETH/USDC lending market with a $97\\%$ LTV tranche and a $2\\%$ liquidation incentive. Here's what might happen:
 - A borrower supplies $100 WETH as collateral and borrows $97 USDC.
 - If the value of WETH drops, and the collateral is suddenly worth $\textdollar 98.5$, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire $\textdollar 98.5$ of WETH collateral.
 - This leaves $\textdollar 0.43$ USDC debt unbacked, leading to bad debt accrual.
 
-The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\% = (1 - \frac{LLTV}{1 + LI}) \times 100\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than $1.06\%$, lenders in such a market should probably opt for a more conservative LTV tranche.
+The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\\% = (1 - \frac{LLTV}{1 + LI}) \times 100\\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than $1.06\\%$, lenders in such a market should probably opt for a more conservative LTV tranche.
 
 
 
