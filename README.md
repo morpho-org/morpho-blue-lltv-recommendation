@@ -100,23 +100,23 @@ In essence, the risk tool recreates a dynamic market environment where it:
 1. **Concentrated Borrow Position**
 
 The simulation begins with the assumption of one concentrated borrower. This initial collateral position size is determined based on various factors about the collateral asset. In the current state of the tool, we set this position size slightly differently based on the specific lending market under consideration:
-- for larger market cap token markets: the larger of $200 million, the size of a 25% slippage sell order
-- for smaller market cap token markets: the larger of $50 million, the size of a 25% slippage sell order
+- for larger market cap token markets: the larger of $\textdollar 200$ million, the size of a $25\\%$ slippage sell order
+- for smaller market cap token markets: the larger of $\textdollar 50$ million, the size of a $25\\%$ slippage sell order
 
-We assume that the borrower takes out as much loan as the input LLTV allows (ex: if the LLTV under consideration is 0.80, then the simulation sets the borrow amount to be 80% of the initial collateral).
+We assume that the borrower takes out as much loan as the input LLTV allows (ex: if the LLTV under consideration is $0.80$, then the simulation sets the borrow amount to be $80\\%$ of the initial collateral).
 
 2. **Simulation Time Step**
 
 After we have initialized the concentrated borrow position, we proceed with simulation. At each timestep of the simulation, we apply:
-- **a constant percentage price decrease**: At each time step, a constant percentage decrease (0.5%) is applied to the ratio of the collateral asset to debt asset to bring the borrow position closer towards liquidations and insolvency. We set the max drawdown based on the 99th percentile monthly price drawdown.
-Ex: If the ratio of the collateral asset to debt asset prices starts the month at 1.0 and reaches a minimum ratio of 0.5 at some point within a 30 day period, its maximum monthly percent drawdown is 50%. Other time periods other than 1 month may be used, but typically, the distribution remains relatively unchanged beyond a 2-week horizon.
+- **a constant percentage price decrease**: At each time step, a constant percentage decrease ($0.5\\%$) is applied to the ratio of the collateral asset to debt asset to bring the borrow position closer towards liquidations and insolvency. We set the max drawdown based on the 99th percentile monthly price drawdown.
+Ex: If the ratio of the collateral asset to debt asset prices starts the month at 1.0 and reaches a minimum ratio of 0.5 at some point within a 30 day period, its maximum monthly percent drawdown is $50\\%$. Other time periods other than 1 month may be used, but typically, the distribution remains relatively unchanged beyond a 2-week horizon.
 Specifically, we use:
-- for larger market cap token markets: the larger of 40% and the 99th percentile of monthly price drawdowns
-- for smaller market cap token markets: the larger of 60% and the 99th percentile of monthly price drawdowns
-This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say 0.7 instead.
+- for larger market cap token markets: the larger of $40\\%$ and the 99th percentile of monthly price drawdowns
+- for smaller market cap token markets: the larger of $60\\%$ and the 99th percentile of monthly price drawdowns
+This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say $0.7% instead.
 
 - **liquidate a portion of the borrow position:** At the given timestep, if the borrower's debt to collateral ratio (LTV) is above their LLTV, we liquidate a portion of their position.
-We repay an amount equal to the 0.5% price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $100k swap incurs a $0.50\%$ price impact, then the liquidation amount is $100k. 
+We repay an amount equal to the $0.5\\%$ price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $\textdollar 100$k swap incurs a $0.50\\%$ price impact, then the liquidation amount is $\textdollar 100$k. 
 
 Each of the parameters specified thus far is a parameter that the user can also input into the risk tool so as to conform to the assumptions they want to bake into the simulation. User can specify their chosen parameters through CLI arguments as we will demonstrate in the subsequent section.
 
@@ -145,7 +145,7 @@ $$
 ### Data Dependencies
 The risk tool uses data from the following APIs:
 - [**CoinGecko**](https://www.coingecko.com/en/api): for historical price data of the collateral and borrow assets of a lending market
-- [**CowSwap**](https://docs.cow.fi/off-chain-services/api): for price impact swap sizes (I.E.: what is the size of swap from token `X` to `Y` that incurs roughly 0.5% price impact?)
+- [**CowSwap**](https://docs.cow.fi/off-chain-services/api): for price impact swap sizes (ex: what is the size of swap from token `X` to `Y` that incurs roughly $0.5\\%$ price impact?)
 
 ### Library Dependencies
 The risk tool is intended to have minimal dependencies. The main software dependencies are standard libraries from the scientific computing/data science ecosystem such as
