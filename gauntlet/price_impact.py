@@ -16,16 +16,16 @@ def cowswap_query(
     token_out: Token,
     amount: float,
     quality: str = "optimal",
-) -> requests.Request:
+) -> str:
     """
-    Returns the raw cowswap API response for a token swap from {token_in} to {token_out}
-    of size {amount}.
+    Returns the cowswap API json response for a token swap from
+    token_in to token_out of size {amount}.
 
     token_in: Token, token object representing the sell token
     token_out: Token, token object representing the buy token
     amount: float, number of tokens of token_in to be sold
     quality: str (optimal or fast)
-
+    Returns: str, the JSON output of the CowSwap api query.
     """
     url = "https://api.cow.fi/mainnet/api/v1/quote"
     params = {
@@ -103,7 +103,7 @@ def price_impact_size(
     price_impact = 1
 
     log.info(
-        f"Computing size of swap price impact of {target_price_impact:.3f} for {token_in.symbol} -> {token_out.symbol}"
+        f"Computing {target_price_impact:.3f} price impact for {token_in.symbol} -> {token_out.symbol}"
     )
     while (
         abs(1 - (price_impact / target_price_impact)) > rtol
@@ -117,7 +117,7 @@ def price_impact_size(
         else:
             max_sz = mid
 
-        log.info(
+        log.debug(
             f"{iters:2d} | {token_in.symbol:6s} | swap size = {mid:.2f} | price impact: {price_impact:.4f} | swap total: ${mid * spot_in/1e6:.2f}mil"
         )
         iters += 1

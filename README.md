@@ -101,8 +101,12 @@ We assume that the borrower takes out as much loan as the input LLTV allows (ex:
 2. **Simulation Time Step**
 
 After we have initialized the concentrated borrow position, we proceed with simulation. At each timestep of the simulation, we apply:
-- **a constant percentage price decrease**: At each time step, a constant percentage decrease (0.5%) is applied to the ratio of the collateral asset to debt asset to bring the borrow position closer towards liquidations and insolvency. We set the max drawdown to be equal to the 99th percentile of monthly price drawdowns.
+- **a constant percentage price decrease**: At each time step, a constant percentage decrease (0.5%) is applied to the ratio of the collateral asset to debt asset to bring the borrow position closer towards liquidations and insolvency. We set the max drawdown based on the 99th percentile monthly price drawdown.
 Ex: If the ratio of the collateral asset to debt asset prices starts the month at $1 and reaches a minimum ratio of 0.5 at some point within a 30 day period, its maximum monthly percent drawdown is 50%. Other time periods other than 1 month may be used, but typically, the distribution remains relatively unchanged beyond a 2-week horizon.
+Specifically, we use:
+- for larger market cap token markets: the larger of 40% and the 99th percentile of monthly price drawdowns
+- for smaller market cap token markets: the larger of 60% and the 99th percentile of monthly price drawdowns
+This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say 0.7 instead.
 
 - **liquidate a portion of the borrow position:** At the given timestep, if the borrower's debt to collateral ratio (LTV) is above their LLTV, we liquidate a portion of their position.
 We repay an amount equal to the 0.5% price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $100k swap incurs a $0.50\%$ price impact, then the liquidation amount is $100k. 
