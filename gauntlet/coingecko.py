@@ -26,6 +26,8 @@ def ms_to_dt(ms: float) -> datetime.datetime:
 
 @dataclass
 class API(ABC):
+    PERIOD_LENGTH = 60
+
     def __init__(self):
         self._last_call_time = 0  # time of last request
         self._calls_in_period = (
@@ -38,12 +40,11 @@ class API(ABC):
 
     def calculate_wait_time(self) -> float:
         dt = time.time() - self._last_call_time
-        period_length = 60
 
         if self._calls_in_period >= self.requests_per_minute:
-            return period_length
+            return API.PERIOD_LENGTH
         elif (
-            dt > period_length
+            dt > API.PERIOD_LENGTH
             or self._calls_in_period < self.requests_per_minute
         ):
             # no need to wait since the elapsed time is long enough
@@ -54,16 +55,19 @@ class API(ABC):
         This function handles making the api request while potentially
         sleeping to avoid hitting the API request limit.
         """
+        now = time.time()
         wt = self.calculate_wait_time()
 
         if wt > 0:
             # Obey the rate limit
             log.debug(f"Rate limit hit. Sleeping for {wt:.3f}s ...")
             time.sleep(wt)
-            self._last_call_time = time.time()
             # reset the counter
             self._calls_in_period = 0
+        elif wt == 0 and now - self._last_call_time > API.PERIOD_LENGTH:
+            self._calls_in_period = 0
 
+        self._last_call_time = now
         self._calls_in_period += 1
         header = self.get_header()
         if header:
@@ -105,7 +109,7 @@ class CoinGecko(API):
         return 500 if self.get_coingecko_api_key() else 10
 
     def token_info(self, address: str, chain: str = "ethereum"):
-        chain_id = 1 if chain == "ethereum" else None
+        chain_id = self.CHAIN_IDS.get(chain)
         url = f"{self.api_url}/coins/{chain_id}/contract/{address}"
         response = self.make_request(url=url)
         return response.json()
