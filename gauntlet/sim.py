@@ -31,31 +31,18 @@ def get_init_collateral_usd(
             price_impacts[collat_token.symbol]["0.25"]
             * current_price(collat_token.address),
         )
-    elif (collat_token in BLUE_CHIPS and borrow_token in SMALL_CAPS) or (
-        collat_token in SMALL_CAPS and borrow_token in BLUE_CHIPS
-    ):
+    else:
         return max(
             50_000_000,
             price_impacts[collat_token.symbol]["0.25"]
             * current_price(collat_token.address),
         )
-    elif collat_token in SMALL_CAPS or borrow_token in SMALL_CAPS:
-        return max(
-            20_000_000,
-            price_impacts[collat_token.symbol]["0.25"]
-            * current_price(collat_token.address),
-            price_impacts[borrow_token.symbol]["0.25"]
-            * current_price(borrow_token.address),
-        )
-    else:
-        return max(
-            price_impacts[collat_token.symbol]["0.25"],
-            price_impacts[borrow_token.symbol]["0.25"],
-        )
 
 
 def heuristic_drawdown(
-    t1: Token, t2: Token, drawdowns: dict[Tuple[str, str], float]
+    t1: Token,
+    t2: Token,
+    drawdowns: dict[Tuple[str, str], float],
 ) -> float:
     """
     t1: Token, the collateral asset of a market
@@ -159,10 +146,10 @@ def simulate_insolvency(
         net_collateral_usd = collateral_tokens * collateral_price
         net_debt_usd = debt_price * debt_tokens
 
-        if i % 1 == 0:
+        if i % 100 == 0:
             log.debug(
-                f"{i=} | debt to collat: {net_debt_usd/net_collateral_usd:.3f}"
-                + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | {lltv=}"
+                f"{i:4d} | LTV: {net_debt_usd/net_collateral_usd:.3f}"
+                + f" | debt: {net_debt_usd:.2f} | collat: {net_collateral_usd:.2f} | LLTV: {lltv:.2f}"
             )
 
         if net_debt_usd / net_collateral_usd >= lltv:

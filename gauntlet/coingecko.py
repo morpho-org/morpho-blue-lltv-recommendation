@@ -202,7 +202,7 @@ def token_from_symbol_or_address(input_str: str) -> Token:
         if input_str in ADDRESS_MAP:
             return ADDRESS_MAP[input_str]
         try:
-            token_info = CG.token_info(input_str)
+            token_info = CoinGecko().token_info(input_str)
             symbol = token_info["symbol"]
             decimals = token_info["detail_platforms"]["ethereum"][
                 "decimal_place"

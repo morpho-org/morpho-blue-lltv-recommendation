@@ -28,28 +28,25 @@ def main(args: argparse.Namespace):
     The resulting dict of LTV results (pair of tokens -> LTV value) will
     be saved in the save path specified by the input args.
     """
-    lltvs = np.arange(0.01, 1.0, 0.01)
-    collateral_token = token_from_symbol_or_address(args.collateral)
-    debt_token = token_from_symbol_or_address(args.borrow)
-    tokens = [collateral_token, debt_token]
-    opt_lltv = None
-    opt_li = None
+    if args.collateral and args.borrow:
+        collateral_token = token_from_symbol_or_address(args.collateral)
+        debt_token = token_from_symbol_or_address(args.borrow)
 
-    # Default behavior is to use cache whenever possible
-    prices = {t: current_price(t.address) for t in tokens}
-    price_impacts = get_price_impacts(
-        tokens, update_cache=args.update_cache, use_cache=args.use_cache
-    )
-    drawdowns = get_drawdowns(
-        tokens, update_cache=args.update_cache, use_cache=args.use_cache
-    )
-    repay_amnts = {
-        t: price_impacts[t.symbol]["0.005"] * prices[t] for t in tokens
-    }
-
-    try:
+        tokens = [collateral_token, debt_token]
+        prices = {t: current_price(t.address) for t in tokens}
+        price_impacts = get_price_impacts(
+            tokens,
+            impacts=[0.005, 0.25],
+            update_cache=args.update_cache,
+            use_cache=args.use_cache,
+        )
+        drawdowns = get_drawdowns(
+            tokens, update_cache=args.update_cache, use_cache=args.use_cache
+        )
         repay_amount_usd = min(
-            repay_amnts[collateral_token], repay_amnts[debt_token]
+            price_impacts[collateral_token.symbol]["0.005"]
+            * prices[collateral_token],
+            price_impacts[debt_token.symbol]["0.005"] * prices[debt_token],
         )
         max_drawdown = heuristic_drawdown(
             collateral_token, debt_token, drawdowns
@@ -57,16 +54,20 @@ def main(args: argparse.Namespace):
         init_collateral_usd = get_init_collateral_usd(
             collateral_token, debt_token, price_impacts
         )
-    except Exception as e:
-        raise ValueError(f"There was a problem with your input tokens: {e}")
+        log.debug(
+            f"{collateral_token} / {debt_token} | repay amount: ${repay_amount_usd:.2f}"
+            + f" | drawdown: {max_drawdown:.3f} | init collat usd: {init_collateral_usd}"
+            + f" | collateral price = ${prices[collateral_token]:.2f}, debt price = ${prices[debt_token]:.2f}"
+            + f" | emp drawdown: {drawdowns[(collateral_token.symbol, debt_token.symbol)]}"
+        )
+    else:
+        debt_token = None
+        collateral_token = None
+        log.info("Running sim with fully parameterized values")
 
-    log.debug(
-        f"{collateral_token} / {debt_token} | repay amount: ${repay_amount_usd:.2f}"
-        + f" | drawdown: {max_drawdown:.3f} | init collat usd: {init_collateral_usd}"
-        + f" | collateral price = ${prices[collateral_token]:.2f}, debt price = ${prices[debt_token]:.2f}"
-        + f" | emp drawdown: {drawdowns[(collateral_token.symbol, debt_token.symbol)]}"
-    )
-
+    lltvs = np.arange(0.01, 1.0, 0.01)
+    opt_lltv = None
+    opt_li = None
     for ltv in lltvs:
         liq_bonus = max(
             compute_liquidation_incentive(args.m, args.beta, ltv),
@@ -75,9 +76,9 @@ def main(args: argparse.Namespace):
         insolvency = simulate_insolvency(
             initial_collateral_usd=args.initial_collateral_usd
             or init_collateral_usd,
-            collateral_price=prices.get(collateral_token)
-            or args.collateral_price,
-            debt_price=prices.get(debt_token) or args.debt_price,
+            collateral_price=args.collateral_price
+            or prices.get(collateral_token),
+            debt_price=args.debt_price or prices.get(debt_token),
             lltv=ltv,
             repay_amount_usd=args.repay_amount_usd or repay_amount_usd,
             liq_bonus=liq_bonus,
@@ -96,12 +97,13 @@ def main(args: argparse.Namespace):
     if opt_lltv is None:
         raise ValueError(
             "Did not observe an optimal LLTV for "
-            + f"{collateral_token.symbol} / {debt_token.symbol}"
+            + f"{collateral_token} / {debt_token}"
         )
 
+    _cs = collateral_token.symbol if collateral_token else None
+    _ds = debt_token.symbol if debt_token else None
     log.info(
-        f"Collat: {collateral_token} | Debt: {debt_token}"
-        + f" | LI: {opt_li:.3f} | LLTV: {opt_lltv:.3f}"
+        f"Collateral: {_cs} | Debt: {_ds} | LI: {opt_li:.3f} | LLTV: {opt_lltv:.3f}"
     )
 
 
@@ -187,4 +189,18 @@ if __name__ == "__main__":
         help="If true/set, use precomputed price impact, and historical drawdown numbers",
     )
     args = parser.parse_args()
+
+    if (args.collateral is None or args.borrow is None) and (
+        args.initial_collateral_usd is None
+        or args.repay_amount_usd is None
+        or args.debt_price is None
+        or args.collateral_price is None
+        or args.max_drawdown is None
+    ):
+        parser.error(
+            "If 'collateral' and 'borrow' are not provided, "
+            + "the following arguments must be supplied: "
+            + "'initial_collateral_usd', 'repay_amount_usd'"
+            + "'debt_price', 'collateral_price', 'max_drawdown'."
+        )
     main(args)
