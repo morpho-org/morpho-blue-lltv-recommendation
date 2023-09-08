@@ -30,7 +30,7 @@ Borrowers and lenders decide which LLTV tranche to borrow or supply into when th
 ### Liquidation Example
 Suppose we have a WETH collateral / USDC borrow market with a 0.75 LLTV tranches. Larry (a lender) supplies $100 USDC into this 0.75 LLTV bucket. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies $100 WETH collateral to borrow $60 USDC. At this point, his LTV is $0.6$.
 
-If/when the price of WETH drops by 20%, Bob's collateral will be worth \$80. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
+If/when the price of WETH drops by 20%, Bob's collateral will be worth <span>$</span>80. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
 
 
 
@@ -56,7 +56,7 @@ Suppose we have a WETH collateral, USDC borrow lending market with the following
 - Lenders Alice and Bob have both supplied $100 USDC each in this market and are the only suppliers in this tranche.
 - Borrower Eve provides $200 WETH in collateral to borrow $160 USDC. 
 
-If the value of WETH drops such that the value of Eve's collateral is worth \$165. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay $150 USDC of her debt to claim $150 \times (1 + 0.10) = 165$. At the end of this liquidation, Eve will have $0 in collateral and $10 in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth $95 USDC.
+If the value of WETH drops such that the value of Eve's collateral is worth <span>$</span>. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay $150 USDC of her debt to claim $\$150 \times (1 + 0.10\%) = 165$. At the end of this liquidation, Eve will have <span>$</span>0 in collateral and <span>$</span>10 in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth <span>$</span>95 USDC.
 
 ### How Does Bad Debt Arise?
 Bad debt accrues when a borrower has some amount of debt that is backed by 0 collateral.  An undercollateralized borrow position primarily stems from liquidations not occuring in a timely manner. Ideally, if the price of the collateral asset ever suffers a large price drop, liquidators would act swiftly to repay the borrower's debt and claim collateral once a borrower is eligible for liquidation, before the loan to value of the position reaches insolvency territory. Delays in liquidation can occur due to:
