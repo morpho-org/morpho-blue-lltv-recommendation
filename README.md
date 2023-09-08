@@ -1,7 +1,7 @@
 # Morpho Blue <> Gauntlet Risk Tool 
 Gauntlet has developed a risk tool to allow potential lenders to Morpho Blue decide on a LLTV that suits their risk appetite. This tool comes in the form of a Python script that anyone can run on their own local machine. Simply run the following command:
 ```bash
-python main.py --collateral {collateral token symbol or address} --borrow {borrow token symbol or address}
+python main.py --collateral {symbol or address} --borrow {token symbol or address}
 ```
 For instance, for a WETH collateral, USDC borrow market, we would run the following command:
 ```
@@ -58,12 +58,12 @@ When bad debt is generated in the aftermath of a liquidation, it is immediately 
 
 ### Bad Debt Example
 Suppose we have a WETH collateral, USDC borrow lending market with the following:
-- Lenders Alice and Bob, and a borrower Eve are all in the 80\% LLTV tranche.
-- The liquidation incentive is 10%
-- Lenders Alice and Bob have both supplied $100 USDC each in this market and are the only suppliers in this tranche.
-- Borrower Eve provides $200 WETH in collateral to borrow $160 USDC. 
+- Lenders Alice and Bob, and a borrower Eve are all in the $80\%$ LLTV tranche.
+- The liquidation incentive is $10\%$
+- Lenders Alice and Bob have both supplied $\$100$ USDC each in this market and are the only suppliers in this tranche.
+- Borrower Eve provides $\$200$ WETH in collateral to borrow $\$160$ USDC. 
 
-If the value of WETH drops such that the value of Eve's collateral is worth <span>$</span>165. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay <span>$</span>150 USDC of her debt to claim $\$150 \times (1 + 0.10\%) = 165$. At the end of this liquidation, Eve will have <span>$</span>0 in collateral and <span>$</span>10 in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth <span>$</span>95 USDC.
+If the value of WETH drops such that the value of Eve's collateral is worth $\$165$. At this point, Eve's LTV is $\frac{160}{165} = 0.969$, which is larger than her LLTV. This means she is eligible to be liquidated. A liquidator can repay <span>$</span>150 USDC of her debt to claim $\$150 \times (1 + 10\%) = \$165$. At the end of this liquidation, Eve will have $\$0$ in collateral and $\$10$ in debt. Since this debt is undercollateralized, the debt is realized instantaneously and split between Alice and Bob equally since they both supplied the same amount to begin with. Their supply positions are now worth $\$95$ USDC.
 
 ### How Does Bad Debt Arise?
 Bad debt accrues when a borrower has some amount of debt that is backed by 0 collateral.  An undercollateralized borrow position primarily stems from liquidations not occuring in a timely manner. Ideally, if the price of the collateral asset ever suffers a large price drop, liquidators would act swiftly to repay the borrower's debt and claim collateral once a borrower is eligible for liquidation, before the loan to value of the position reaches insolvency territory. Delays in liquidation can occur due to:
