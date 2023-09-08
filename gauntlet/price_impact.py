@@ -54,13 +54,18 @@ def price_impact_size(
     rtol=5e-2,
     max_sz_usd=1_000_000_000,
 ) -> float:
-    def cowswap_oracle(token_in: Token, token_out: Token, size: float):
+    def cowswap_oracle(token_in: Token, token_out: Token, size: float) -> float:
         """
         token_in: address of the sell token
         token_out: address of the buy token
         size: amount of token_in to sell
+
+        Returns: price impact of a swap of {size} from token_in to token_out
+
+        Sometimes cowswap returns incorrect results. It is worth double checking
+        the price impact numbers against other DEX aggregators like 1inch.
         """
-        response = cowswap_query(token_in, token_out, size, quality="optimal")
+        response = cowswap_query(token_in, token_out, size, quality="fast")
         amount_in_usd = (
             float(response["quote"]["sellAmount"])
             / (10**token_in.decimals)

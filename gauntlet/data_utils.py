@@ -163,7 +163,7 @@ def get_price_impacts(
 
     # If update_cache or tokens are missing, calculate impacts
     if update_cache or any(tok.symbol not in impact_sizes for tok in tokens):
-        log.info("Computing price impacts. This may take 3-5 minutes.")
+        log.info("Computing price impacts. This may take 1-2 minutes.")
         for tok in tokens:
             impact_sizes[tok.symbol] = {}
             tgt = Tokens.USDT if tok == Tokens.USDC else Tokens.USDC
