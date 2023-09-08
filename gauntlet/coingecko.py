@@ -39,15 +39,10 @@ class API(ABC):
         raise NotImplementedError
 
     def calculate_wait_time(self) -> float:
-        dt = time.time() - self._last_call_time
-
         if self._calls_in_period >= self.requests_per_minute:
             return API.PERIOD_LENGTH
-        elif (
-            dt > API.PERIOD_LENGTH
-            or self._calls_in_period < self.requests_per_minute
-        ):
-            # no need to wait since the elapsed time is long enough
+        else:
+            # no need to wait since we are under the rate limit
             return 0
 
     def make_request(self, **request_kwargs) -> requests.request:
@@ -64,7 +59,7 @@ class API(ABC):
             time.sleep(wt)
             # reset the counter
             self._calls_in_period = 0
-        elif wt == 0 and now - self._last_call_time > API.PERIOD_LENGTH:
+        if wt == 0 and now - self._last_call_time > API.PERIOD_LENGTH:
             self._calls_in_period = 0
 
         self._last_call_time = now

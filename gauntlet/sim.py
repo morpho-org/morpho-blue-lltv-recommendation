@@ -4,7 +4,11 @@ import numpy as np
 
 from .coingecko import current_price
 from .constants import BLUE_CHIPS
+from .constants import DEFAULT_DRAWDOWN
+from .constants import LARGE_CAP_DRAWDOWN
+from .constants import LARGE_CAP_MIN_WHALE_POS
 from .constants import LARGE_CAPS
+from .constants import SMALL_CAP_MIN_WHALE_POS
 from .constants import SMALL_CAPS
 from .constants import TOL
 from .logger import get_logger
@@ -27,13 +31,13 @@ def get_init_collateral_usd(
     """
     if collat_token in BLUE_CHIPS and borrow_token in BLUE_CHIPS:
         return max(
-            200_000_000,
+            LARGE_CAP_MIN_WHALE_POS,
             price_impacts[collat_token.symbol]["0.25"]
             * current_price(collat_token.address),
         )
     else:
         return max(
-            50_000_000,
+            SMALL_CAP_MIN_WHALE_POS,
             price_impacts[collat_token.symbol]["0.25"]
             * current_price(collat_token.address),
         )
@@ -59,11 +63,9 @@ def heuristic_drawdown(
         return max(hist_dd, 0.02)
 
     if t1 in BLUE_CHIPS and t2 in BLUE_CHIPS:
-        dd = 0.4
-    elif t1 in SMALL_CAPS and t2 in SMALL_CAPS:
-        dd = 0.6
+        dd = LARGE_CAP_DRAWDOWN
     else:
-        dd = 0.5
+        dd = DEFAULT_DRAWDOWN
 
     return max(dd, hist_dd)
 

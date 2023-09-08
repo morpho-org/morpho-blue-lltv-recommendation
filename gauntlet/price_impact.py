@@ -46,6 +46,34 @@ def cowswap_query(
     return response.json()
 
 
+def cowswap_price_impact(
+    token_in: Token, token_out: Token, size: float
+) -> float:
+    """
+    token_in: address of the sell token
+    token_out: address of the buy token
+    size: amount of token_in to sell
+
+    Returns: price impact of a swap of {size} from token_in to token_out
+
+    Sometimes cowswap returns incorrect results. It is worth double checking
+    the price impact numbers against other DEX aggregators like 1inch.
+    """
+    response = cowswap_query(token_in, token_out, size, quality="fast")
+    amount_in_usd = (
+        float(response["quote"]["sellAmount"])
+        / (10**token_in.decimals)
+        * current_price(token_in.address)
+    )
+    amount_out_usd = (
+        float(response["quote"]["buyAmount"])
+        / (10**token_out.decimals)
+        * current_price(token_out.address)
+    )
+    price_impact = 1 - float(amount_out_usd / amount_in_usd)
+    return price_impact
+
+
 def price_impact_size(
     token_in: Token,
     token_out: Token,
@@ -53,7 +81,7 @@ def price_impact_size(
     rtol=5e-2,
     max_sz_usd=1_000_000_000,
 ) -> float:
-    '''
+    """
     Computes the number of token_in necessary to get the target_price_impact
     when swapping token_in for token_out.
 
@@ -66,32 +94,7 @@ def price_impact_size(
 
     Returns: float, number of tokens necessary to get the desired
         target_price_impact.
-    '''
-    def cowswap_oracle(token_in: Token, token_out: Token, size: float) -> float:
-        """
-        token_in: address of the sell token
-        token_out: address of the buy token
-        size: amount of token_in to sell
-
-        Returns: price impact of a swap of {size} from token_in to token_out
-
-        Sometimes cowswap returns incorrect results. It is worth double checking
-        the price impact numbers against other DEX aggregators like 1inch.
-        """
-        response = cowswap_query(token_in, token_out, size, quality="fast")
-        amount_in_usd = (
-            float(response["quote"]["sellAmount"])
-            / (10**token_in.decimals)
-            * current_price(token_in.address)
-        )
-        amount_out_usd = (
-            float(response["quote"]["buyAmount"])
-            / (10**token_out.decimals)
-            * current_price(token_out.address)
-        )
-        price_impact = 1 - float(amount_out_usd / amount_in_usd)
-        return price_impact
-
+    """
     cg = CoinGecko()
     spot_in = cg.current_price(token_in.address)
     min_sz = 0
@@ -99,12 +102,15 @@ def price_impact_size(
     iters = 0
     price_impact = 1
 
+    log.info(
+        f"Computing size of swap price impact of {target_price_impact:.3f} for {token_in.symbol} -> {token_out.symbol}"
+    )
     while (
         abs(1 - (price_impact / target_price_impact)) > rtol
         and iters < MAX_ITERS
     ):
         mid = (max_sz + min_sz) / 2.0
-        price_impact = cowswap_oracle(token_in, token_out, mid)
+        price_impact = cowswap_price_impact(token_in, token_out, mid)
 
         if price_impact < target_price_impact:
             min_sz = mid
