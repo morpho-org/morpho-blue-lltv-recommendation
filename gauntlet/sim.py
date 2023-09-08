@@ -74,6 +74,8 @@ def compute_liquidation_incentive(m: float, beta: float, lltv: float) -> float:
     m: float, a constant that determines the max liq incentive
     beta: float, constant
     lltv: float, liquidation loan to value parameter of the market
+
+    Returns: liquidation incentive
     """
     return min(m, (1 / (beta * lltv + (1 - beta))) - 1)
 

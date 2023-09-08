@@ -42,7 +42,13 @@ def get_prices(
     return prices
 
 
-def calc_drawdown(window: pd.Series):
+def calc_drawdown(window: pd.Series) -> float:
+    """
+    Computes the max drawdown (largest value vs the final value)
+    of a time series.
+    This is generally to be used via:
+        pd.DataFrame.rolling(window_size).apply(calc_drawdown)
+    """
     return (max(window) - window[-1]) / max(window)
 
 
@@ -137,6 +143,18 @@ def get_price_impacts(
     use_cache: bool = False,
     approximate_impact: bool = False,
 ) -> dict[Token, dict[float, float]]:
+    """
+    Computes
+
+    Returns: dict mapping Tokens to a dict of
+        price impact -> size of swap necessary to incur the given price impact
+
+    Example return:
+    {
+        tokenA: {0.005: 1000, 0.25: 100000}
+        tokenB: {0.005: 300, 0.25: 50000}
+    }
+    """
     impact_sizes = {}
 
     if use_cache:

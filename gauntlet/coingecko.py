@@ -18,7 +18,7 @@ from .tokens import Token
 log = get_logger(__name__)
 
 
-def ms_to_dt(ms):
+def ms_to_dt(ms: float) -> datetime.datetime:
     timestamp_seconds = ms / 1000
     dt_object = datetime.datetime.fromtimestamp(timestamp_seconds)
     return dt_object.strftime("%Y-%m-%d")
@@ -171,32 +171,12 @@ class CoinGecko(API):
         return os.environ.get("COINGECKO_API_KEY")
 
 
-class GeckoTerminal(API):
-    @property
-    def requests_per_minute(self):
-        return 30
-
-    def top_dex_tvl(self, address, chain="eth"):
-        url = f"https://api.geckoterminal.com/api/v2/networks/{chain}/tokens/{address}/pools"
-        self.make_request(url=url)
-        response = self.make_request(url=url)
-
-        if not response.ok:
-            response.raise_for_status()
-
-        data = response.json()["data"]
-        tot_tvl = 0
-        for d in data:
-            attrs = d.get("attributes", {})
-            tot_tvl += float(attrs.get("reserve_in_usd"))
-
-        return tot_tvl
-
-
 def token_from_symbol_or_address(input_str: str) -> Token:
     """
     Creates a Token object from an input symbol or address.
     This assumes that the token is an erc20 on ethereum.
+
+    input_str: str representing a token symbol or token address
     """
     if "0x" in input_str and len(input_str) == 42:
         if input_str in ADDRESS_MAP:

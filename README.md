@@ -134,7 +134,6 @@ $$
 ### Data Dependencies
 The risk tool uses data from the following APIs:
 - [**CoinGecko**](https://www.coingecko.com/en/api): for historical price data of the collateral and borrow assets of a lending market
-- [**GeckoTerminal**](https://apiguide.geckoterminal.com/): for obtaining a rough estimate of the size of DEX liquidity pools containing a given asset
 - [**CowSwap**](https://docs.cow.fi/off-chain-services/api): for price impact swap sizes (I.E.: what is the size of swap from token `X` to `Y` that incurs roughly 0.5% price impact?)
 
 ### Library Dependencies
@@ -217,7 +216,7 @@ By default, we use cached drawdown and cached price impact numbers that have bee
  --update_cache
 ```
 
-While creating this tool, we aimed to provide a reasonable set of default methods for setting parameters such as max drawdown, per iteration percent decrease, repay amount, and initial borrow position. However, specific assets may exhibit unique properties that render these default settings less suitable. In these markets, users have the flexibility to override these settings and manually specify the parameters to better align with the assets' characteristics. We encourage users to explore and experiment with these adjustable parameters to tailor the tool to their particular needs and risk tolerance.
+While creating this tool, we aimed to provide a reasonable set of default methods for setting parameters such as max drawdown, per iteration percent decrease, repay amount, and initial borrow position. However, specific assets may exhibit unique properties that render these default settings less suitable. In these markets, users have the flexibility to override these settings and manually specify the parameters to better align with the assets' characteristics. We encourage users to explore and experiment with these adjustable parameters to tailor the tool to their particular needs and risk tolerance. The demo notebook shows experiments on the various parameters of the simulation and how they might affect the recommended LLTV values.
 
 ## Disclaimer
 This risk tool is designed with a specific focus of simulating bad debt within different LLTV buckets under very specific assumptions about the collateral and borrow assets. While it offers flexibility and adaptability within its scope, it is essential to recognize its limitations and the scenarios it does not cover:
