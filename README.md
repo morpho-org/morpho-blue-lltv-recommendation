@@ -35,9 +35,9 @@ Morpho Blue is lending protocol that consists of independent lending "markets". 
 Borrowers and lenders decide which LLTV tranche to borrow or supply into when they participate in a market.
     
 ### Liquidation Example
-Suppose we have a WETH collateral / USDC borrow market with a $0.75$ LLTV tranches. Larry (a lender) supplies $\textdollar 100$ USDC into this $0.75$ LLTV bucket. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies $\textdollar 100$ WETH collateral to borrow $\textdollar 60$ USDC. At this point, his LTV is $0.6$.
+Suppose we have a WETH collateral/USDC borrow market with a $0.75$ LLTV tranche. Larry (a lender) supplies $\textdollar 100$ USDC into this $0.75$ LLTV tranche. Bob (a borrower) also wants to borrow from the $0.75$ LLTV tranche and supplies $\textdollar 100$ WETH collateral to borrow $\textdollar 60$ USDC. At this point, his LTV is $0.6$.
 
-If/when the price of WETH drops by $20\\%$, Bob's collateral will be worth $\textdollar 80$. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
+If the price of WETH drops by $20\\%$, Bob's collateral will be worth $\textdollar 80$. Bob can now be liquidated as his loan to value ratio has hit his LLTV: $\frac{\text{Bob's debt}}{\text{Bob's collateral}} = \frac{60}{80} = 0.75$.
 
 
 
@@ -79,7 +79,7 @@ In a lending market, having a high LLTV (ex: $95\\%$ or higher) can create scena
 
 Consider an example involving a WETH/USDC lending market with a $97\\%$ LTV tranche and a $2\\%$ liquidation incentive. Here's what might happen:
 - A borrower supplies $100 WETH as collateral and borrows $97 USDC.
-- If the value of WETH drops, and the collateral is suddenly worth $\textdollar 98.5$, an optimal liquidator could repay $\frac{98.5}{1.02} = 96.57$ to claim the entire $\textdollar 98.5$ of WETH collateral.
+- If the value of WETH drops, and the collateral is suddenly worth $\textdollar 98.5$, an optimal liquidator could repay $\frac{\textdollar 98.5}{1.02} = \textdollar 96.57$ to claim the entire $\textdollar 98.5$ of WETH collateral.
 - This leaves $\textdollar 0.43$ USDC debt unbacked, leading to bad debt accrual.
 
 The above scenario illustrates how a high LTV ratio can create a very narrow window for healthy liquidations. In this example, a mere $1.06\\% = (1 - \frac{LLTV}{1 + LI}) \times 100\\%$ price buffer exists before bad debt is guaranteed, which is an incredibly tight margin. Given that the daily price of WETH/USDC often changes by more than $1.06\\%$, lenders in such a market should probably opt for a more conservative LTV tranche.
@@ -113,10 +113,10 @@ Ex: If the ratio of the collateral asset to debt asset prices starts the month a
 Specifically, we use:
 - for larger market cap token markets: the larger of $40\\%$ and the 99th percentile of monthly price drawdowns
 - for smaller market cap token markets: the larger of $60\\%$ and the 99th percentile of monthly price drawdowns
-This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say $0.7% instead.
+This drawdown parameter can be increased or decreased to suit the users' risk appetite. For instance, a more risk averse user may want to consider a larger price drawdown and set this parameter to say $0.7$ instead.
 
 - **liquidate a portion of the borrow position:** At the given timestep, if the borrower's debt to collateral ratio (LTV) is above their LLTV, we liquidate a portion of their position.
-We repay an amount equal to the $0.5\\%$ price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $\textdollar 100$k swap incurs a $0.50\\%$ price impact, then the liquidation amount is $\textdollar 100$k. 
+We repay an amount equal to the $0.5\\%$ price impact swap size of the collateral asset or borrow asset (whichever is smaller). For example, if a $\textdollar 1000$ swap of the collateral asset to USDC yields $\textdollar 995$, then the $0.50\\%$ price impact swap size is $1000$ and the liquidation amount will be set to $\textdollar 1000$.
 
 Each of the parameters specified thus far is a parameter that the user can also input into the risk tool so as to conform to the assumptions they want to bake into the simulation. User can specify their chosen parameters through CLI arguments as we will demonstrate in the subsequent section.
 
