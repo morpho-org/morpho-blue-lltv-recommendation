@@ -85,7 +85,6 @@ def print_optimal_lltv(collateral_symbol, debt_symbol):
 
 
 tokens = [token.symbol for token in Tokens]
-print(tokens)
 # radio button
 collateral_symbol = st.selectbox("Collateral token symbol", tokens)
 debt_symbol = st.selectbox("Debt token symbol", tokens)
