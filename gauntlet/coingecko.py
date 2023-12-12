@@ -186,12 +186,14 @@ def token_from_symbol_or_address(input_str: str) -> Token:
             decimals = token_info["detail_platforms"]["ethereum"][
                 "decimal_place"
             ]
+            total_supply = float(token_info["market_data"]["total_supply"])
             name = token_info["name"]
             return Token(
                 symbol=symbol,
                 decimals=decimals,
                 address=input_str,
                 coingecko_id=name,
+                total_supply=total_supply,
             )
         except Exception as e:
             raise ValueError(
