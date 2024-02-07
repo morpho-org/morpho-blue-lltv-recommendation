@@ -6,6 +6,7 @@ class Token(NamedTuple):
     address: str
     decimals: int
     coingecko_id: str
+    total_supply: float = None
 
 
 class Tokens(Token, Enum):
