@@ -19,14 +19,23 @@ from gauntlet.sim import get_init_collateral_usd
 from gauntlet.sim import heuristic_drawdown
 from gauntlet.sim import simulate_insolvency
 
+N_SLEEP_SEC = 15
 def get_max_lltv(collateral_token_address, loan_token_address):
     
     # Parameters for the simulation
+    time.sleep(N_SLEEP_SEC)
     collateral_token = token_from_symbol_or_address(collateral_token_address)
+    time.sleep(N_SLEEP_SEC)
     debt_token = token_from_symbol_or_address(loan_token_address)
 
     tokens = [collateral_token, debt_token]
-    prices = {t: current_price(t.address) for t in tokens}
+    prices = {}
+
+    time.sleep(N_SLEEP_SEC)
+    prices[collateral_token] = current_price(collateral_token.address)
+    time.sleep(N_SLEEP_SEC)
+    prices[debt_token] = current_price(debt_token.address)
+
     if collateral_token.symbol[0] == 'b':
         # RWA Backed asset case
 
@@ -142,11 +151,19 @@ def get_max_supply_cap(collateral_token_address, loan_token_address, lltv):
     # TODO : Add the case for RWA backed assets 
 
     # Parameters for the simulation
+    time.sleep(N_SLEEP_SEC)
     collateral_token = token_from_symbol_or_address(collateral_token_address)
+    time.sleep(N_SLEEP_SEC)
     debt_token = token_from_symbol_or_address(loan_token_address)
 
     tokens = [collateral_token, debt_token]
-    prices = {t: current_price(t.address) for t in tokens}
+    prices = {}
+
+    time.sleep(N_SLEEP_SEC)
+    prices[collateral_token] = current_price(collateral_token.address)
+    time.sleep(N_SLEEP_SEC)
+    prices[debt_token] = current_price(debt_token.address)
+
 
     if collateral_token.symbol[0] == 'b':
         # RWA Backed asset case
@@ -247,12 +264,11 @@ if __name__ == '__main__':
     max_cap = get_max_supply_cap(collateral_token, loan_token, lltv)
     print(max_lltv, max_cap)
 
-    time.sleep(20)
+
     collateral_token = "0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5" # IB01
     loan_token = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" # WETH
     lltv = 0.94
 
     max_lltv = get_max_lltv(collateral_token, loan_token)
-    time.sleep(20)
     max_cap = get_max_supply_cap(collateral_token, loan_token, lltv)
     print(max_lltv, max_cap)
