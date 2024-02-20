@@ -5,19 +5,19 @@ import requests
 import os
 import time
 
-from gauntlet.sim import compute_liquidation_incentive
-from gauntlet.constants import M, BETA
-from gauntlet.sim import simulate_insolvency
-from gauntlet.coingecko import CoinGecko
-from gauntlet.coingecko import current_price
-from gauntlet.coingecko import token_from_symbol_or_address
-from gauntlet.data_utils import get_drawdowns
-from gauntlet.data_utils import get_price_impacts
-from gauntlet.logger import get_logger
-from gauntlet.sim import compute_liquidation_incentive
-from gauntlet.sim import get_init_collateral_usd
-from gauntlet.sim import heuristic_drawdown
-from gauntlet.sim import simulate_insolvency
+from morpho_blue_lltv_recommendation.gauntlet.sim import compute_liquidation_incentive
+from morpho_blue_lltv_recommendation.gauntlet.constants import M, BETA
+from morpho_blue_lltv_recommendation.gauntlet.sim import simulate_insolvency
+from morpho_blue_lltv_recommendation.gauntlet.coingecko import CoinGecko
+from morpho_blue_lltv_recommendation.gauntlet.coingecko import current_price
+from morpho_blue_lltv_recommendation.gauntlet.coingecko import token_from_symbol_or_address
+from morpho_blue_lltv_recommendation.gauntlet.data_utils import get_drawdowns
+from morpho_blue_lltv_recommendation.gauntlet.data_utils import get_price_impacts
+from morpho_blue_lltv_recommendation.gauntlet.logger import get_logger
+from morpho_blue_lltv_recommendation.gauntlet.sim import compute_liquidation_incentive
+from morpho_blue_lltv_recommendation.gauntlet.sim import get_init_collateral_usd
+from morpho_blue_lltv_recommendation.gauntlet.sim import heuristic_drawdown
+from morpho_blue_lltv_recommendation.gauntlet.sim import simulate_insolvency
 
 N_SLEEP_SEC = 15
 def get_max_lltv(collateral_token_address, loan_token_address):
@@ -36,11 +36,19 @@ def get_max_lltv(collateral_token_address, loan_token_address):
     time.sleep(N_SLEEP_SEC)
     prices[debt_token] = current_price(debt_token.address)
 
-    if collateral_token.symbol[0] == 'b':
+    if collateral_token.symbol[0] == 'b' or collateral_token.symbol[0:2] == 'wb':
         # RWA Backed asset case
 
-        ticker = collateral_token.symbol[1:] + '.L' # Yahoo finance ticker
-        
+        if collateral_token.symbol[0] == 'b':
+            ticker_symbol = collateral_token.symbol[1:]
+        else:
+            ticker_symbol = collateral_token.symbol[2:]
+        if ticker_symbol == 'c3m':
+            ticker_extension = '.PA'
+        else:
+            ticker_extension ='.L'
+
+        ticker = ticker_symbol + ticker_extension # Yahoo finance ticker
         # Last year historical prices of RWA
         bond_ticker = yf.Ticker(ticker)
         df_prices = bond_ticker.history(period="max")
@@ -142,9 +150,12 @@ def get_amount_out(amount, loan_token, collateral_token):
   headers = requestOptions.get("headers", {})
   body = requestOptions.get("body", {})
   params = requestOptions.get("params", {})
-
+  time.sleep(2)
   response = requests.get(apiUrl, headers=headers, params=params)
-  amountOut = int(response.json()['toAmount'])
+  try:
+    amountOut = int(response.json()['toAmount'])
+  except:
+    print(response.text)
   return amountOut
 
 def get_max_supply_cap(collateral_token_address, loan_token_address, lltv):
@@ -165,13 +176,20 @@ def get_max_supply_cap(collateral_token_address, loan_token_address, lltv):
     prices[debt_token] = current_price(debt_token.address)
 
 
-    if collateral_token.symbol[0] == 'b':
+    if collateral_token.symbol[0] == 'b' or collateral_token.symbol[0:2] == 'wb':
         # RWA Backed asset case
 
-        ticker = collateral_token.symbol[1:] + '.L' # Yahoo finance ticker
+        if collateral_token.symbol[0] == 'b':
+            ticker_symbol = collateral_token.symbol[1:]
+        else:
+            ticker_symbol = collateral_token.symbol[2:]
+        if ticker_symbol == 'c3m':
+            ticker_extension = '.PA'
+        else:
+            ticker_extension ='.L'
 
         # Last year historical prices of RWA
-        bond_ticker = yf.Ticker(ticker)
+        bond_ticker = yf.Ticker(ticker_symbol + ticker_extension)
         df_prices = bond_ticker.history(period="max")
         df_prices.sort_index(inplace=True)
         df_prices.dropna(inplace=True)
@@ -255,14 +273,14 @@ def get_max_supply_cap(collateral_token_address, loan_token_address, lltv):
 
 
 if __name__ == '__main__':
-    collateral_token = "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0" # wstETH
-    loan_token = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" # WETH
+    collateral_token = "0x95D7337d43340E2721960Dc402D9b9117f0d81a2" #wbC3M
+    loan_token = "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f" # eurE
     lltv = 0.94
 
 
     max_lltv = get_max_lltv(collateral_token, loan_token)
-    max_cap = get_max_supply_cap(collateral_token, loan_token, lltv)
-    print(max_lltv, max_cap)
+    #max_cap = get_max_supply_cap(collateral_token, loan_token, lltv)
+    print(max_lltv)
 
 
     collateral_token = "0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5" # IB01
