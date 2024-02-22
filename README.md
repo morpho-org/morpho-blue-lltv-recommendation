@@ -240,6 +240,8 @@ This risk tool is designed with a specific focus of simulating bad debt within d
 
 Users should recognize the tool's specific focus and limitations, employing it for its intended purpose while seeking supplementary risk assessment methods for scenarios not covered.
 
+This tool is provided “as is”, at your own risk, and without warranties of any kind. No developer or entity involved in creating the tool will be liable for any claims or damages whatsoever associated with your use, inability to use, or your interaction with other users of, the tool, including any direct, indirect, incidental, special, exemplary, punitive or consequential damages, or loss of profits, cryptocurrencies, tokens, or anything else of value.
+
 ## Contact
 
 *If any questions, please reach out to @gauntlet_xyz on Twitter. For more information,  visit our website at www.gauntlet.xyz.*
